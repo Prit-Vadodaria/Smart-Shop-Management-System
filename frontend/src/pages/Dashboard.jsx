@@ -1,6 +1,89 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { ShoppingBag, Users, Package, FileText, ArrowUpRight, TrendingUp } from 'lucide-react';
+import { ShoppingBag, Users, Package, FileText, ArrowUpRight, TrendingUp, Settings as SettingsIcon, Save } from 'lucide-react';
+import api from '../services/api';
+
+const StoreSettings = () => {
+  const [settings, setSettings] = useState({ shippingPercentage: 5, freeShippingThreshold: 500 });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await api.get('/settings');
+        setSettings(data.data);
+      } catch (err) {
+        console.error('Error fetching settings', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await api.put('/settings', settings);
+      alert('Settings updated successfully!');
+    } catch (err) {
+      console.error('Error saving settings', err);
+      alert('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="animate-pulse h-40 bg-gray-50 rounded-xl"></div>;
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <SettingsIcon className="h-5 w-5 text-primary-600" />
+          Store Configuration
+        </h3>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="btn-primary py-1.5 px-4 text-sm flex items-center gap-2 shadow-sm"
+        >
+          <Save className="h-4 w-4" /> {saving ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Shipping Percentage (%)</label>
+          <div className="relative">
+            <input
+              type="number"
+              step="0.1"
+              value={settings.shippingPercentage}
+              onChange={(e) => setSettings({ ...settings, shippingPercentage: parseFloat(e.target.value) })}
+              className="w-full pl-4 pr-12 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary-500 outline-none"
+            />
+            <span className="absolute right-4 top-2 text-gray-400 font-bold">%</span>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1">Calculated as a percentage of the customer's total subtotal.</p>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Free Shipping Threshold (₹)</label>
+          <div className="relative">
+            <input
+              type="number"
+              value={settings.freeShippingThreshold}
+              onChange={(e) => setSettings({ ...settings, freeShippingThreshold: parseFloat(e.target.value) })}
+              className="w-full pl-8 pr-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary-500 outline-none"
+            />
+            <span className="absolute left-3 top-2 text-gray-400 font-bold">₹</span>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1">Shipping becomes ₹0 if the subtotal exceeds this value.</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const StatCard = ({ title, value, icon: Icon, trend }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between hover:shadow-md transition-shadow">
@@ -43,7 +126,7 @@ const Dashboard = () => {
             <StatCard title="Total Customers" value="842" icon={Users} trend="+2%" />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-gray-900">Recent Orders</h3>
@@ -69,71 +152,33 @@ const Dashboard = () => {
               </div>
             </div>
 
+            {/* Store Configuration Section */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-gray-900">Low Stock Alerts</h3>
-                <a href="#" className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center">
-                  Inventory <ArrowUpRight className="h-4 w-4 ml-1" />
-                </a>
-              </div>
-              <div className="space-y-4">
-                 {[
-                   { name: 'Organic Milk 1L', stock: 4, min: 10 },
-                   { name: 'Brown Bread', stock: 2, min: 15 },
-                   { name: 'Fresh Eggs (Dozen)', stock: 5, min: 20 }
-                 ].map((item, i) => (
-                  <div key={i} className="flex justify-between items-center p-3 border-l-4 border-red-500 bg-red-50 rounded-r-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{item.name}</p>
-                      <p className="text-sm text-red-600">Only {item.stock} left (Min: {item.min})</p>
-                    </div>
-                    <button className="text-sm px-3 py-1 bg-white border border-gray-200 rounded text-gray-600 hover:bg-gray-50 shadow-sm">
-                      Restock
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <StoreSettings />
             </div>
           </div>
         </>
       ) : user.role === 'Staff' ? (
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center cursor-pointer hover:bg-primary-50 transition-colors">
-                 <ShoppingBag className="mx-auto h-12 w-12 text-primary-600 mb-4" />
-                 <h3 className="text-xl font-bold">New POS Bill</h3>
-                 <p className="text-gray-500 mt-2">Start a new point of sale transaction.</p>
-             </div>
-             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center cursor-pointer hover:bg-primary-50 transition-colors">
-                 <Package className="mx-auto h-12 w-12 text-primary-600 mb-4" />
-                 <h3 className="text-xl font-bold">Today's Deliveries</h3>
-                 <p className="text-gray-500 mt-2">View and manage orders out for delivery.</p>
-             </div>
-         </div>
-      ) : (
-         // Customer Dashboard
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatCard title="Wallet Balance" value="₹120" icon={ShoppingBag} />
-            <StatCard title="Active Subscriptions" value="2" icon={FileText} />
-            <StatCard title="Total Orders" value="15" icon={Package} />
 
-            <div className="md:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-4">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Your Recent Active Subscriptions</h3>
-                <div className="divide-y divide-gray-100">
-                    <div className="py-4 flex justify-between items-center">
-                        <div className="flex items-center">
-                            <div className="bg-blue-100 p-3 rounded-lg mr-4">
-                                <Package className="h-6 w-6 text-blue-600" />
-                            </div>
-                            <div>
-                                <p className="font-bold">Fresh Farm Milk (1L)</p>
-                                <p className="text-sm text-gray-500">Daily Delivery • Qty: 2</p>
-                            </div>
-                        </div>
-                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">Active</span>
-                    </div>
-                </div>
-            </div>
-         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center cursor-pointer hover:bg-primary-50 transition-colors">
+            <ShoppingBag className="mx-auto h-12 w-12 text-primary-600 mb-4" />
+            <h3 className="text-xl font-bold">New POS Bill</h3>
+            <p className="text-gray-500 mt-2">Start a new point of sale transaction.</p>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center cursor-pointer hover:bg-primary-50 transition-colors">
+            <Package className="mx-auto h-12 w-12 text-primary-600 mb-4" />
+            <h3 className="text-xl font-bold">Today's Deliveries</h3>
+            <p className="text-gray-500 mt-2">View and manage orders out for delivery.</p>
+          </div>
+        </div>
+      ) : (
+        // Customer Dashboard
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard title="Wallet Balance" value="₹120" icon={ShoppingBag} />
+          <StatCard title="Active Subscriptions" value="2" icon={FileText} />
+          <StatCard title="Total Orders" value="15" icon={Package} />
+        </div>
       )}
     </div>
   );

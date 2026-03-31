@@ -1,44 +1,41 @@
 import Settings from '../models/Settings.js';
 
-// @desc    Get Settings
+// @desc    Get store settings
 // @route   GET /api/settings
 // @access  Public
 export const getSettings = async (req, res, next) => {
   try {
-    let settings = await Settings.findOne();
+    let settings = await Settings.findOne({ id: 'store-settings' });
+    
     if (!settings) {
-      // Return default values if not created yet
-      settings = new Settings({});
-      await settings.save();
+      settings = await Settings.create({ id: 'store-settings' });
     }
-    res.json(settings);
+    
+    res.json({ success: true, data: settings });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Update Settings
+// @desc    Update store settings
 // @route   PUT /api/settings
-// @access  Private/Admin
+// @access  Private/Admin/Manager
 export const updateSettings = async (req, res, next) => {
-    try {
-      let settings = await Settings.findOne();
-      
-      if (!settings) {
-          settings = new Settings(req.body);
-      } else {
-          settings.shopName = req.body.shopName || settings.shopName;
-          settings.taxRate = req.body.taxRate !== undefined ? req.body.taxRate : settings.taxRate;
-          settings.subscriptionCutOffTime = req.body.subscriptionCutOffTime || settings.subscriptionCutOffTime;
-          settings.deliveryRadiusKm = req.body.deliveryRadiusKm || settings.deliveryRadiusKm;
-          settings.minimumOrderValue = req.body.minimumOrderValue !== undefined ? req.body.minimumOrderValue : settings.minimumOrderValue;
-          settings.currency = req.body.currency || settings.currency;
-          settings.logoUrl = req.body.logoUrl || settings.logoUrl;
-      }
-      
-      const updatedSettings = await settings.save();
-      res.json(updatedSettings);
-    } catch (error) {
-      next(error);
+  try {
+    let settings = await Settings.findOne({ id: 'store-settings' });
+    
+    if (!settings) {
+      settings = await Settings.create({ id: 'store-settings' });
     }
+
+    const { shippingPercentage, freeShippingThreshold } = req.body;
+    
+    settings.shippingPercentage = shippingPercentage !== undefined ? shippingPercentage : settings.shippingPercentage;
+    settings.freeShippingThreshold = freeShippingThreshold !== undefined ? freeShippingThreshold : settings.freeShippingThreshold;
+
+    const updatedSettings = await settings.save();
+    res.json({ success: true, data: updatedSettings });
+  } catch (error) {
+    next(error);
+  }
 };

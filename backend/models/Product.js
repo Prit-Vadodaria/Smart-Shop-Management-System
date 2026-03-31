@@ -9,6 +9,7 @@ const ProductSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Please add a product name'],
+    unique: true,
     trim: true
   },
   image: {
@@ -22,7 +23,7 @@ const ProductSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Please select a category'],
-    enum: ['Electronics', 'Groceries', 'Clothing', 'Dairy', 'Daily Needs'] // Add as needed
+    enum: ['Groceries', 'Dairy', 'Bakery'] // Add as needed
   },
   description: {
     type: String,

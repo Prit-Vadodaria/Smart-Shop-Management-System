@@ -34,6 +34,14 @@ export const getProductById = async (req, res, next) => {
 // @access  Private/Admin/Manager/Staff
 export const createProduct = async (req, res, next) => {
   try {
+    const { name } = req.body;
+    
+    // Check if product with same name already exists
+    const productExists = await Product.findOne({ name });
+    if (productExists) {
+      return res.status(400).json({ success: false, message: 'Product with this name already exists' });
+    }
+
     const product = new Product({
       ...req.body,
       user: req.user._id,
@@ -68,6 +76,14 @@ export const updateProduct = async (req, res, next) => {
     const product = await Product.findById(req.params.id);
 
     if (product) {
+      // Check if product name is being updated to something already taken
+      if (name && name !== product.name) {
+        const productExists = await Product.findOne({ name });
+        if (productExists) {
+           return res.status(400).json({ success: false, message: 'Another product with this name already exists' });
+        }
+      }
+
       product.name = name || product.name;
       product.price = price || product.price;
       product.description = description || product.description;

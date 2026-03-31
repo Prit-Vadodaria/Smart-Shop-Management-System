@@ -1,10 +1,12 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Menu, X, ShoppingBag, User, LogOut } from 'lucide-react';
+import { CartContext } from '../context/CartContext';
+import { Menu, X, ShoppingBag, User, LogOut, Bell, ShoppingCart } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
+  const { cartTotalCount } = useContext(CartContext);
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -28,7 +30,7 @@ const Navbar = () => {
                 <Link to="/dashboard" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                   Dashboard
                 </Link>
-                {user.role === 'Admin' && (
+                {(user.role === 'Admin' || user.role === 'Manager') && (
                   <>
                     <Link to="/products" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                       Products
@@ -57,6 +59,25 @@ const Navbar = () => {
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
             {user ? (
               <div className="flex items-center space-x-4">
+                {/* Notification & Cart Icons */}
+                <div className="flex items-center space-x-4 pr-4 border-r border-gray-200">
+                  <button className="relative p-1 rounded-full text-gray-400 hover:text-primary-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <span className="absolute top-1 right-1 block h-2 w-2 rounded-full ring-2 ring-white bg-red-400"></span>
+                    <Bell className="h-6 w-6" />
+                  </button>
+                  <button 
+                    onClick={() => navigate('/cart')}
+                    className="relative p-1 rounded-full text-gray-400 hover:text-primary-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    {cartTotalCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary-600 px-1 py-1 text-[10px] font-bold text-white ring-2 ring-white shadow-sm">
+                        {cartTotalCount}
+                      </span>
+                    )}
+                    <ShoppingCart className="h-6 w-6" />
+                  </button>
+                </div>
+
                 <div className="flex items-center space-x-2 text-sm font-medium text-gray-700">
                   <div className="bg-primary-100 p-2 rounded-full text-primary-600">
                     <User className="h-4 w-4" />
@@ -82,7 +103,20 @@ const Navbar = () => {
             )}
           </div>
           
-          <div className="-mr-2 flex items-center sm:hidden">
+          <div className="-mr-2 flex items-center gap-2 sm:hidden">
+            {user && (
+              <button 
+                onClick={() => navigate('/cart')}
+                className="relative p-1 rounded-full text-gray-400 hover:text-primary-600 transition-colors focus:outline-none"
+              >
+                {cartTotalCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary-600 px-1 py-1 text-[10px] font-bold text-white ring-2 ring-white shadow-sm">
+                    {cartTotalCount}
+                  </span>
+                )}
+                <ShoppingCart className="h-6 w-6" />
+              </button>
+            )}
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
@@ -106,7 +140,19 @@ const Navbar = () => {
                 <Link to="/dashboard" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                   Dashboard
                 </Link>
-                {/* Add other links based on role similar to desktop */}
+                {(user.role === 'Admin' || user.role === 'Manager') && (
+                  <>
+                    <Link to="/products" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                      Products
+                    </Link>
+                    <Link to="/orders" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                      Orders & POS
+                    </Link>
+                    <Link to="/subscriptions" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                      Subscriptions
+                    </Link>
+                  </>
+                )}
                 <button
                   onClick={handleLogout}
                   className="block w-full text-left px-4 py-2 text-base font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
