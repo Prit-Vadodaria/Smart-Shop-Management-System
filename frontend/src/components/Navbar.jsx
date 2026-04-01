@@ -24,7 +24,7 @@ const Navbar = () => {
               <ShoppingBag className="h-8 w-8 text-primary-600" />
               <span className="ml-2 font-bold text-xl text-gray-900 tracking-tight">ShopManage</span>
             </div>
-            
+
             {user && (
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 <Link to="/dashboard" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
@@ -35,13 +35,15 @@ const Navbar = () => {
                     <Link to="/products" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                       Products
                     </Link>
-                    <Link to="/orders" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
-                      Orders & POS
-                    </Link>
                     <Link to="/subscriptions" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                       Subscriptions
                     </Link>
                   </>
+                )}
+                {(user.role === 'Admin' || user.role === 'Manager' || user.role === 'Staff') && (
+                  <Link to="/store-orders" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                    Orders & POS
+                  </Link>
                 )}
                 {user.role === 'Customer' && (
                   <>
@@ -50,6 +52,9 @@ const Navbar = () => {
                     </Link>
                     <Link to="/my-subscriptions" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                       My Auto-Delivery
+                    </Link>
+                    <Link to="/my-orders" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                      My Orders
                     </Link>
                   </>
                 )}
@@ -65,7 +70,7 @@ const Navbar = () => {
                     <span className="absolute top-1 right-1 block h-2 w-2 rounded-full ring-2 ring-white bg-red-400"></span>
                     <Bell className="h-6 w-6" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => navigate('/cart')}
                     className="relative p-1 rounded-full text-gray-400 hover:text-primary-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
@@ -102,10 +107,10 @@ const Navbar = () => {
               </div>
             )}
           </div>
-          
+
           <div className="-mr-2 flex items-center gap-2 sm:hidden">
             {user && (
-              <button 
+              <button
                 onClick={() => navigate('/cart')}
                 className="relative p-1 rounded-full text-gray-400 hover:text-primary-600 transition-colors focus:outline-none"
               >
@@ -134,8 +139,8 @@ const Navbar = () => {
             {user ? (
               <>
                 <div className="px-4 py-3 border-b border-gray-50">
-                   <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                   <p className="text-sm font-medium text-gray-500 truncate">{user.email}</p>
+                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                  <p className="text-sm font-medium text-gray-500 truncate">{user.email}</p>
                 </div>
                 <Link to="/dashboard" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                   Dashboard
@@ -145,13 +150,15 @@ const Navbar = () => {
                     <Link to="/products" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                       Products
                     </Link>
-                    <Link to="/orders" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
-                      Orders & POS
-                    </Link>
                     <Link to="/subscriptions" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                       Subscriptions
                     </Link>
                   </>
+                )}
+                {(user.role === 'Admin' || user.role === 'Manager' || user.role === 'Staff') && (
+                  <Link to="/store-orders" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                    Orders & POS
+                  </Link>
                 )}
                 <button
                   onClick={handleLogout}

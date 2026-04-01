@@ -74,8 +74,13 @@ const OrderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Packed', 'Out for delivery', 'Delivered', 'Failed', 'Skipped', 'Pickup Ready', 'Picked Up', 'Cancelled'],
+    enum: ['Pending', 'Packed', 'Ready to deliver', 'Out for delivery', 'Delivered', 'Failed', 'Skipped', 'Pickup Ready', 'Picked Up', 'Cancelled'],
     default: 'Pending'
+  },
+  assignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   }
 }, {
   timestamps: true

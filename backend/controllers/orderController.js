@@ -90,7 +90,12 @@ export const updateOrderToPaid = async (req, res, next) => {
       };
 
       const updatedOrder = await order.save();
-      res.json(updatedOrder);
+      
+      const populatedOrder = await Order.findById(updatedOrder._id)
+        .populate('customer', 'id name')
+        .populate('assignedTo', 'id name email role');
+
+      res.json(populatedOrder);
     } else {
       res.status(404);
       throw new Error('Order not found');
@@ -109,6 +114,11 @@ export const updateOrderStatus = async (req, res, next) => {
     const order = await Order.findById(req.params.id);
 
     if (order) {
+      // Check if order is already delivered or cancelled
+      if (['Delivered', 'Picked Up', 'Cancelled'].includes(order.status)) {
+        return res.status(400).json({ success: false, message: `Cannot change status of a ${order.status} order.` });
+      }
+
       order.status = status;
       
       if (status === 'Delivered' || status === 'Picked Up') {
@@ -117,7 +127,12 @@ export const updateOrderStatus = async (req, res, next) => {
       }
 
       const updatedOrder = await order.save();
-      res.json(updatedOrder);
+      
+      const populatedOrder = await Order.findById(updatedOrder._id)
+        .populate('customer', 'id name')
+        .populate('assignedTo', 'id name email role');
+
+      res.json(populatedOrder);
     } else {
       res.status(404);
       throw new Error('Order not found');
@@ -144,8 +159,93 @@ export const getMyOrders = async (req, res, next) => {
 // @access  Private/Admin/Manager/Staff
 export const getOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find({}).populate('customer', 'id name');
+    let query = {};
+    // If user is Staff, only show orders assigned to them
+    if (req.user.role === 'Staff') {
+      query = { assignedTo: req.user._id };
+    }
+
+    const orders = await Order.find(query)
+      .populate('customer', 'id name')
+      .populate('assignedTo', 'id name email role');
     res.json(orders);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Assign order to staff
+// @route   PUT /api/orders/:id/assign
+// @access  Private/Admin/Manager
+export const assignOrderToStaff = async (req, res, next) => {
+  try {
+    const { staffId } = req.body;
+    const order = await Order.findById(req.params.id);
+
+    if (order) {
+      // Check if order is already delivered or cancelled
+      if (['Delivered', 'Picked Up', 'Cancelled'].includes(order.status)) {
+        return res.status(400).json({ success: false, message: `Cannot reassign a ${order.status} order.` });
+      }
+
+      order.assignedTo = staffId || null;
+      const updatedOrder = await order.save();
+      
+      const populatedOrder = await Order.findById(updatedOrder._id)
+        .populate('customer', 'id name')
+        .populate('assignedTo', 'id name email role');
+
+      res.json(populatedOrder);
+    } else {
+      res.status(404);
+      throw new Error('Order not found');
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Cancel an order
+// @route   PUT /api/orders/:id/cancel
+// @access  Private (Owner/Admin)
+export const cancelOrder = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id);
+
+    if (order) {
+      // Check if order belongs to user or if user is Admin/Manager
+      if (order.customer.toString() !== req.user._id.toString() && !['Admin', 'Manager'].includes(req.user.role)) {
+        res.status(401);
+        throw new Error('Not authorized to cancel this order');
+      }
+
+      // Check if status allows cancellation
+      if (!['Pending', 'Packed'].includes(order.status)) {
+        return res.status(400).json({ success: false, message: `Cannot cancel an order that is ${order.status}` });
+      }
+
+      order.status = 'Cancelled';
+      
+      // Restore stock
+      for (let item of order.orderItems) {
+        const product = await Product.findById(item.product);
+        if (product) {
+          product.countInStock += item.quantity;
+          await product.save();
+        }
+      }
+
+      const updatedOrder = await order.save();
+      
+      const populatedOrder = await Order.findById(updatedOrder._id)
+        .populate('customer', 'id name')
+        .populate('assignedTo', 'id name email role');
+
+      res.json(populatedOrder);
+    } else {
+      res.status(404);
+      throw new Error('Order not found');
+    }
   } catch (error) {
     next(error);
   }

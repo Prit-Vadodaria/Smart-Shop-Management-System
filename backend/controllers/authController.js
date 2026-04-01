@@ -102,3 +102,18 @@ export const getMe = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Get all staff members
+// @route   GET /api/auth/staff
+// @access  Private/Admin/Manager
+export const getStaff = async (req, res, next) => {
+  try {
+    const staff = await User.find({ role: 'Staff' }).select('name email role');
+    res.status(200).json({
+      success: true,
+      data: staff
+    });
+  } catch (error) {
+    next(error);
+  }
+};

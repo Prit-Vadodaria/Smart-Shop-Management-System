@@ -11,6 +11,9 @@ import Products from './pages/Products';
 
 import { CartProvider } from './context/CartContext';
 import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import MyOrders from './pages/MyOrders';
+import StoreOrders from './pages/StoreOrders';
 
 function App() {
   return (
@@ -41,9 +44,27 @@ function App() {
               </ProtectedRoute>
             } />
 
+            <Route path="/checkout" element={
+              <ProtectedRoute roles={['Customer']}>
+                <Checkout />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/my-orders" element={
+              <ProtectedRoute roles={['Customer']}>
+                <MyOrders />
+              </ProtectedRoute>
+            } />
+
             <Route path="/products" element={
               <ProtectedRoute roles={['Admin', 'Manager', 'Staff']}>
                 <Products />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/store-orders" element={
+              <ProtectedRoute roles={['Admin', 'Manager', 'Staff']}>
+                <StoreOrders />
               </ProtectedRoute>
             } />
 

@@ -7,6 +7,7 @@ import api from '../services/api';
 const Cart = () => {
     const { cartItems, removeFromCart, updateQuantity, cartTotalPrice, cartTotalCount } = useContext(CartContext);
     const [settings, setSettings] = useState({ shippingPercentage: 5, freeShippingThreshold: 500 });
+    const [orderType, setOrderType] = useState('Takeaway');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -141,7 +142,23 @@ const Cart = () => {
                             </div>
                         </div>
 
-                        <button className="w-full bg-primary-600 hover:bg-primary-700 text-white rounded-2xl py-4 font-bold text-lg shadow-xl shadow-primary-500/30 transition-all hover:scale-[1.02] active:scale-95 mb-4">
+                        <div className="mb-6">
+                            <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Order Type</h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <label className={`flex items-center justify-center py-3 px-4 rounded-xl border cursor-pointer transition-all ${orderType === 'Takeaway' ? 'border-primary-600 bg-primary-50 text-primary-700 font-bold' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                                    <input type="radio" className="hidden" name="orderType" value="Takeaway" checked={orderType === 'Takeaway'} onChange={(e) => setOrderType(e.target.value)} />
+                                    <span>Takeaway</span>
+                                </label>
+                                <label className={`flex items-center justify-center py-3 px-4 rounded-xl border cursor-pointer transition-all ${orderType === 'Home Delivery' ? 'border-primary-600 bg-primary-50 text-primary-700 font-bold' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                                    <input type="radio" className="hidden" name="orderType" value="Home Delivery" checked={orderType === 'Home Delivery'} onChange={(e) => setOrderType(e.target.value)} />
+                                    <span>Home Delivery</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={() => navigate('/checkout', { state: { orderType, cartItems, cartTotalPrice, totalTaxAmount, finalShippingFee, finalTotal } })}
+                            className="w-full bg-primary-600 hover:bg-primary-700 text-white rounded-2xl py-4 font-bold text-lg shadow-xl shadow-primary-500/30 transition-all hover:scale-[1.02] active:scale-95 mb-4">
                             Proceed to Checkout
                         </button>
                         
