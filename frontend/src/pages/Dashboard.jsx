@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { ShoppingBag, Users, Package, FileText, ArrowUpRight, TrendingUp, Settings as SettingsIcon, Save } from 'lucide-react';
+import { ShoppingBag, Users, Package, FileText, ArrowUpRight, TrendingUp, Settings as SettingsIcon, Save, AlertTriangle, RefreshCw, Clock, Truck } from 'lucide-react';
 import api from '../services/api';
 
 const StoreSettings = () => {
@@ -105,6 +105,62 @@ const StatCard = ({ title, value, icon: Icon, trend }) => (
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+  const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [isLowStockLoading, setIsLowStockLoading] = useState(false);
+  const [assignedOrders, setAssignedOrders] = useState([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(false);
+  const [stats, setStats] = useState({
+    totalInventoryValue: 0,
+    totalProductsInStock: 0,
+    totalCustomers: 0,
+    activeSubscriptions: 0
+  });
+
+  const fetchStats = async () => {
+    if (user.role === 'Admin' || user.role === 'Manager') {
+      try {
+        const { data } = await api.get('/products/dashboard-stats');
+        setStats(data.data);
+      } catch (err) {
+        console.error('Error fetching dashboard stats', err);
+      }
+    }
+  };
+
+  const fetchLowStock = async () => {
+    if (user.role === 'Admin' || user.role === 'Manager') {
+      try {
+        setIsLowStockLoading(true);
+        const { data } = await api.get('/products/low-stock');
+        setLowStockProducts(data.data);
+      } catch (err) {
+        console.error('Error fetching low stock products', err);
+      } finally {
+        setIsLowStockLoading(false);
+      }
+    }
+  };
+
+  const fetchAssignedOrders = async () => {
+    if (user.role === 'Staff') {
+      try {
+        setIsOrdersLoading(true);
+        const { data } = await api.get('/orders');
+        const sortedOrders = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
+        setAssignedOrders(sortedOrders);
+      } catch (err) {
+        console.error('Error fetching assigned orders', err);
+      } finally {
+        setIsOrdersLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchLowStock();
+    fetchAssignedOrders();
+    fetchStats();
+  }, [user.role]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -117,41 +173,61 @@ const Dashboard = () => {
         </p>
       </div>
 
+      {/* Low Stock Notification Banner */}
+      {(user.role === 'Admin' || user.role === 'Manager') && lowStockProducts.length > 0 && (
+        <div className="mb-8 bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 shadow-sm animate-in fade-in slide-in-from-top duration-500">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-red-100 p-3 rounded-full text-red-600">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-red-900">Low Stock Alert</h2>
+                <p className="text-red-700 text-sm font-medium">
+                  {lowStockProducts.length} product(s) have reached their minimum stock threshold.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={fetchLowStock}
+              disabled={isLowStockLoading}
+              className="text-red-500 hover:text-red-700 transition-colors p-2"
+              title="Refresh stock status"
+            >
+              <RefreshCw className={`h-5 w-5 ${isLowStockLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {lowStockProducts.map(product => (
+              <div key={product._id} className="bg-white/60 border border-red-100 rounded-lg p-3 flex justify-between items-center group hover:bg-white transition-all">
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-900 text-sm truncate">{product.name}</p>
+                  <p className="text-xs text-red-600 font-black">Stock: {product.countInStock} (Min: {product.minStockThreshold})</p>
+                </div>
+                <a
+                  href="/products"
+                  className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 p-1.5 rounded-md hover:bg-red-100"
+                  title="Update Stock"
+                >
+                  <ArrowUpRight className="h-4 w-4" />
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {user.role === 'Admin' || user.role === 'Manager' ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatCard title="Total Revenue" value="₹45,231" icon={ShoppingBag} trend="+12%" />
-            <StatCard title="Active Subscriptions" value="128" icon={FileText} trend="+5%" />
-            <StatCard title="Products in Stock" value="1,245" icon={Package} />
-            <StatCard title="Total Customers" value="842" icon={Users} trend="+2%" />
+            <StatCard title="Total Inventory Value" value={`₹${stats.totalInventoryValue.toLocaleString()}`} icon={ShoppingBag} />
+            <StatCard title="Active Subscriptions" value={stats.activeSubscriptions} icon={FileText} />
+            <StatCard title="Products in Stock" value={stats.totalProductsInStock.toLocaleString()} icon={Package} />
+            <StatCard title="Total Customers" value={stats.totalCustomers} icon={Users} />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-gray-900">Recent Orders</h3>
-                <a href="#" className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center">
-                  View all <ArrowUpRight className="h-4 w-4 ml-1" />
-                </a>
-              </div>
-              <div className="space-y-4">
-                {[1, 2, 3].map((_, i) => (
-                  <div key={i} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-100">
-                    <div>
-                      <p className="font-medium text-gray-900">Order #ORD-{3042 + i}</p>
-                      <p className="text-sm text-gray-500">2 items</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-gray-900">₹{450 + (i * 120)}</p>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Paid
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
+          <div className="grid grid-cols-1 gap-8 mb-8">
             {/* Store Configuration Section */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <StoreSettings />
@@ -159,17 +235,81 @@ const Dashboard = () => {
           </div>
         </>
       ) : user.role === 'Staff' ? (
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center cursor-pointer hover:bg-primary-50 transition-colors">
-            <ShoppingBag className="mx-auto h-12 w-12 text-primary-600 mb-4" />
-            <h3 className="text-xl font-bold">New POS Bill</h3>
-            <p className="text-gray-500 mt-2">Start a new point of sale transaction.</p>
+        <div className="space-y-8">
+          {/* Staff Stats Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatCard
+              title="Assigned Orders"
+              value={assignedOrders.length}
+              icon={ShoppingBag}
+            />
+            <StatCard
+              title="Pending"
+              value={assignedOrders.filter(o => ['Pending', 'Packed'].includes(o.status)).length}
+              icon={Clock}
+            />
+            <StatCard
+              title="Deliveries"
+              value={assignedOrders.filter(o => ['Ready to deliver', 'Out for delivery', 'Delivered'].includes(o.status)).length}
+              icon={Truck}
+            />
           </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center cursor-pointer hover:bg-primary-50 transition-colors">
-            <Package className="mx-auto h-12 w-12 text-primary-600 mb-4" />
-            <h3 className="text-xl font-bold">Today's Deliveries</h3>
-            <p className="text-gray-500 mt-2">View and manage orders out for delivery.</p>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <Package className="h-6 w-6 text-primary-600" />
+                My Assigned Orders
+              </h3>
+              <a href="/store-orders" className="btn-primary py-1.5 px-4 text-xs">
+                Manage All Orders
+              </a>
+            </div>
+
+            {isOrdersLoading ? (
+              <div className="p-12 text-center text-gray-500 font-medium">Loading your orders...</div>
+            ) : assignedOrders.length === 0 ? (
+              <div className="p-16 text-center">
+                <div className="bg-gray-50 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
+                  <Package className="h-8 w-8 text-gray-300" />
+                </div>
+                <h4 className="text-lg font-bold text-gray-800">No Orders Assigned</h4>
+                <p className="text-gray-500 text-sm max-w-xs mx-auto mt-2">You don't have any orders assigned for processing at the moment.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {assignedOrders.map((order) => (
+                  <div key={order._id} className="p-6 hover:bg-gray-50 transition-colors group">
+                    <div className="flex flex-wrap justify-between items-center gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-gray-900">#{order._id.substring(order._id.length - 8).toUpperCase()}</span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${order.status === 'Delivered' || order.status === 'Picked Up' ? 'bg-green-100 text-green-700' :
+                            order.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            }`}>
+                            {order.status}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500 font-medium">Customer: <span className="text-gray-900">{order.customer?.name}</span></p>
+                      </div>
+
+                      <div className="flex items-center gap-6 text-right">
+                        <div className="hidden sm:block">
+                          <p className="text-xs text-gray-400 font-black uppercase tracking-widest leading-none mb-1">Items</p>
+                          <p className="text-sm font-bold text-gray-900">{order.orderItems.length} Product(s)</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-400 font-black uppercase tracking-widest leading-none mb-1">Subtotal</p>
+                          <p className="text-lg font-black text-gray-900">₹{order.totalPrice}</p>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (

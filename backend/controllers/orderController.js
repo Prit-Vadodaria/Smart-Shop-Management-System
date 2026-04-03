@@ -1,6 +1,15 @@
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 
+// Helper to update stock
+const updateStock = async (orderItems, increment = true) => {
+  for (const item of orderItems) {
+    await Product.findByIdAndUpdate(item.product, {
+      $inc: { countInStock: increment ? item.quantity : -item.quantity }
+    });
+  }
+};
+
 // @desc    Create new order
 // @route   POST /api/orders
 // @access  Private (Customer/Staff)
@@ -22,13 +31,7 @@ export const addOrderItems = async (req, res, next) => {
       throw new Error('No order items');
     } else {
       // Deduct stock
-      for (let item of orderItems) {
-        const product = await Product.findById(item.product);
-        if (product) {
-          product.countInStock -= item.quantity;
-          await product.save();
-        }
-      }
+      await updateStock(orderItems, false);
 
       const order = new Order({
         orderItems,
@@ -90,7 +93,7 @@ export const updateOrderToPaid = async (req, res, next) => {
       };
 
       const updatedOrder = await order.save();
-      
+
       const populatedOrder = await Order.findById(updatedOrder._id)
         .populate('customer', 'id name')
         .populate('assignedTo', 'id name email role');
@@ -119,15 +122,20 @@ export const updateOrderStatus = async (req, res, next) => {
         return res.status(400).json({ success: false, message: `Cannot change status of a ${order.status} order.` });
       }
 
+      // Restore stock if being cancelled
+      if (status === 'Cancelled' && order.status !== 'Cancelled') {
+        await updateStock(order.orderItems, true);
+      }
+
       order.status = status;
-      
+
       if (status === 'Delivered' || status === 'Picked Up') {
-         order.isDelivered = true;
-         order.deliveredAt = Date.now();
+        order.isDelivered = true;
+        order.deliveredAt = Date.now();
       }
 
       const updatedOrder = await order.save();
-      
+
       const populatedOrder = await Order.findById(updatedOrder._id)
         .populate('customer', 'id name')
         .populate('assignedTo', 'id name email role');
@@ -190,7 +198,7 @@ export const assignOrderToStaff = async (req, res, next) => {
 
       order.assignedTo = staffId || null;
       const updatedOrder = await order.save();
-      
+
       const populatedOrder = await Order.findById(updatedOrder._id)
         .populate('customer', 'id name')
         .populate('assignedTo', 'id name email role');
@@ -220,23 +228,17 @@ export const cancelOrder = async (req, res, next) => {
       }
 
       // Check if status allows cancellation
-      if (!['Pending', 'Packed'].includes(order.status)) {
+      if (!['Pending', 'Packed', 'Ready to deliver', 'Pickup Ready'].includes(order.status)) {
         return res.status(400).json({ success: false, message: `Cannot cancel an order that is ${order.status}` });
       }
 
-      order.status = 'Cancelled';
-      
       // Restore stock
-      for (let item of order.orderItems) {
-        const product = await Product.findById(item.product);
-        if (product) {
-          product.countInStock += item.quantity;
-          await product.save();
-        }
-      }
+      await updateStock(order.orderItems, true);
+
+      order.status = 'Cancelled';
 
       const updatedOrder = await order.save();
-      
+
       const populatedOrder = await Order.findById(updatedOrder._id)
         .populate('customer', 'id name')
         .populate('assignedTo', 'id name email role');
