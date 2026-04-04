@@ -305,7 +305,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {assignedOrders.slice(0, 10).map((order) => (
+                {assignedOrders.slice(0, 3).map((order) => (
                   <div key={order._id} className="p-6 hover:bg-gray-50 transition-colors group">
                     <div className="flex flex-wrap justify-between items-center gap-4">
                       <div className="space-y-1">
