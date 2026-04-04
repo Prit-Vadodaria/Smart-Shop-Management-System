@@ -12,6 +12,7 @@ const Shop = () => {
     const [categoryFilter, setCategoryFilter] = useState('All');
     const [sortOption, setSortOption] = useState('name-az');
     const [subscriptionProduct, setSubscriptionProduct] = useState(null);
+    const [selectedProducts, setSelectedProducts] = useState([]);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -66,6 +67,16 @@ const Shop = () => {
     };
 
     const filteredProducts = sortedAndFilteredProducts();
+
+    const toggleSelect = (product) => {
+        if (selectedProducts.find(p => p._id === product._id)) {
+            setSelectedProducts(selectedProducts.filter(p => p._id !== product._id));
+        } else {
+            setSelectedProducts([...selectedProducts, product]);
+        }
+    };
+
+    const isSelected = (id) => selectedProducts.find(p => p._id === id);
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -134,6 +145,18 @@ const Shop = () => {
                                         <ShoppingCart className="h-12 w-12 text-gray-300" />
                                     </div>
                                 )}
+                                {product.isSubscriptionEligible && (
+                                    <div className="absolute top-3 left-3 z-10">
+                                        <label className="flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={!!isSelected(product._id)}
+                                                onChange={() => toggleSelect(product)}
+                                                className="w-6 h-6 rounded-lg text-primary-600 border-white/50 focus:ring-primary-500 bg-white/20 backdrop-blur-md cursor-pointer transition-all border-2"
+                                            />
+                                        </label>
+                                    </div>
+                                )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                             </div>
                             <div className="p-5 flex flex-col flex-grow">
@@ -179,9 +202,36 @@ const Shop = () => {
             
             {subscriptionProduct && (
                 <SubscriptionModal 
-                    product={subscriptionProduct} 
-                    onClose={() => setSubscriptionProduct(null)} 
+                    products={Array.isArray(subscriptionProduct) ? subscriptionProduct : [subscriptionProduct]} 
+                    onClose={() => {
+                        setSubscriptionProduct(null);
+                        setSelectedProducts([]);
+                    }} 
                 />
+            )}
+
+            {selectedProducts.length > 0 && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 bg-white/90 backdrop-blur-md px-6 py-4 rounded-3xl shadow-2xl border border-primary-100 flex items-center gap-6 animate-in slide-in-from-bottom-8 duration-300">
+                    <p className="text-gray-900 font-bold whitespace-nowrap">
+                        <span className="bg-primary-600 text-white w-7 h-7 inline-flex items-center justify-center rounded-full mr-2">{selectedProducts.length}</span>
+                        Items Selected
+                    </p>
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => setSelectedProducts([])}
+                            className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                            Clear
+                        </button>
+                        <button 
+                            onClick={() => setSubscriptionProduct(selectedProducts)}
+                            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-primary-500/30 transition-all flex items-center gap-2"
+                        >
+                            <CalendarClock className="h-4 w-4" />
+                            Subscribe Bulk
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );

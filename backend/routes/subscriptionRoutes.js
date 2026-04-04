@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   createSubscription,
+  createBulkSubscriptions,
   getMySubscriptions,
   updateSubscriptionStatus,
   toggleVacationMode,
@@ -21,6 +22,9 @@ router.route('/generate-orders')
 
 router.route('/active')
   .get(protect, authorize('Admin', 'Manager'), getActiveSubscriptions);
+
+router.route('/bulk')
+  .post(protect, createBulkSubscriptions);
 
 router.route('/my-subscriptions')
   .get(protect, getMySubscriptions);

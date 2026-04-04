@@ -44,6 +44,42 @@ export const createSubscription = async (req, res, next) => {
   }
 };
 
+// @desc    Create bulk subscriptions
+// @route   POST /api/subscriptions/bulk
+// @access  Private
+export const createBulkSubscriptions = async (req, res, next) => {
+    try {
+        const { items, frequency, customDays, startDate, endDate } = req.body;
+
+        if (!items || items.length === 0) {
+            res.status(400);
+            throw new Error('No items provided for subscription');
+        }
+
+        const subscriptions = [];
+        for (const item of items) {
+            const prod = await Product.findById(item.product);
+            if (!prod) continue;
+            if (!prod.isSubscriptionEligible) continue;
+
+            const subscription = new Subscription({
+                customer: req.user._id,
+                product: item.product,
+                quantity: item.quantity || prod.minSubscriptionQuantity || 1,
+                frequency,
+                customDays,
+                startDate,
+                endDate
+            });
+            subscriptions.push(await subscription.save());
+        }
+
+        res.status(201).json(subscriptions);
+    } catch (error) {
+        next(error);
+    }
+};
+
 // @desc    Get logged in user subscriptions
 // @route   GET /api/subscriptions/my-subscriptions
 // @access  Private
@@ -149,104 +185,130 @@ export const generateDailyOrders = async (req, res, next) => {
             .populate('product')
             .populate('customer');
 
-        let createdCount = 0;
-        let skippedCount = 0;
+        let createdOrdersCount = 0;
+        let skippedSubscriptionsCount = 0;
         let errorCount = 0;
+
+        // 1. Identify which subscriptions are due today
+        const dueSubscriptions = [];
 
         for (const sub of activeSubscriptions) {
             try {
-                // Safety Check: Avoid crashing if customer or product reference is broken
                 if (!sub.customer || !sub.product) {
-                    console.warn(`Skipping subscription ${sub._id} due to missing customer or product reference.`);
-                    skippedCount++;
+                    skippedSubscriptionsCount++;
                     continue;
                 }
 
-            // 1. Basic vacation check
-            if (sub.vacationMode && sub.vacationMode.isOn) {
-                const start = new Date(sub.vacationMode.startDate);
-                const end = new Date(sub.vacationMode.endDate);
-                if (today >= start && today <= end) {
-                    skippedCount++;
-                    continue;
-                }
-            }
-
-            // 2. Frequency logic
-            let isDue = false;
-            if (sub.frequency === 'Daily') {
-                isDue = true;
-            } else if (sub.frequency === 'Alternate days') {
                 const startDate = new Date(sub.startDate);
-                startDate.setHours(0,0,0,0);
-                const diffTime = Math.abs(today - startDate);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                if (diffDays % 2 === 0) isDue = true;
-            } else if (sub.frequency === 'Custom days') {
-                if (sub.customDays.includes(currentDayName)) isDue = true;
-            }
+                startDate.setHours(0, 0, 0, 0);
 
-            if (!isDue) continue;
+                if (today < startDate) continue;
 
-            // 3. Skip if already generated an order for this sub today
-            const alreadyGenerated = await Order.findOne({
-                subscription: sub._id,
-                createdAt: { $gte: today }
-            });
-            if (alreadyGenerated) continue;
+                if (sub.vacationMode && sub.vacationMode.isOn) {
+                    const vStart = new Date(sub.vacationMode.startDate);
+                    const vEnd = new Date(sub.vacationMode.endDate);
+                    if (today >= vStart && today <= vEnd) {
+                        skippedSubscriptionsCount++;
+                        continue;
+                    }
+                }
 
-            // 4. Get default shipping address
-            const profile = await CustomerProfile.findOne({ user: sub.customer._id });
-            const defaultAddr = profile ? profile.addresses.find(a => a.isDefaultDelivery) || profile.addresses[0] : null;
+                let isDue = false;
+                if (sub.frequency === 'Daily') isDue = true;
+                else if (sub.frequency === 'Alternate days') {
+                    const diffTime = Math.abs(today - startDate);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays % 2 === 0) isDue = true;
+                } else if (sub.frequency === 'Custom days') {
+                    if (sub.customDays.includes(currentDayName)) isDue = true;
+                }
 
-            if (!defaultAddr) {
-                console.warn(`No address found for customer ${sub.customer.name}, using placeholders.`);
-            }
+                if (!isDue) continue;
 
-            const itemsPrice = sub.quantity * sub.product.price;
-            const taxPrice = itemsPrice * (sub.product.taxPercentage / 100);
-            const totalPrice = itemsPrice + taxPrice;
+                // Check if this specific subscription already has an order generated for today
+                const alreadyGenerated = await Order.findOne({
+                    subscription: sub._id,
+                    createdAt: { $gte: today }
+                });
+                if (alreadyGenerated) continue;
 
-            const order = new Order({
-                customer: sub.customer._id,
-                subscription: sub._id,
-                orderItems: [{
-                    name: sub.product.name,
-                    quantity: sub.quantity,
-                    image: sub.product.image,
-                    price: sub.product.price,
-                    product: sub.product._id
-                }],
-                itemsPrice,
-                taxPrice,
-                shippingPrice: 0,
-                totalPrice,
-                shippingAddress: {
-                    address: defaultAddr ? `${defaultAddr.addressLine1}, ${defaultAddr.addressLine2 || ''}` : 'No address specified',
-                    city: defaultAddr ? defaultAddr.city : 'N/A',
-                    postalCode: defaultAddr ? defaultAddr.pincode : '000000',
-                    country: 'India'
-                },
-                orderType: 'Home Delivery',
-                paymentMethod: 'Cash', // Default for subscription for simplicity, or "UPI"
-                isPaid: false,
-                status: 'Pending'
-            });
-
-                await order.save();
-                createdCount++;
-            } catch (loopErr) {
-                console.error(`Error generating order for subscription ${sub._id}:`, loopErr);
+                dueSubscriptions.push(sub);
+            } catch (err) {
+                console.error('Error processing sub during due-check:', err);
                 errorCount++;
             }
         }
 
-        res.json({ 
-            success: true, 
-            createdCount, 
-            skippedCount,
-            errorCount,
-            message: `System generated ${createdCount} orders for today's deliveries.` 
+        // 2. Group due subscriptions by customer
+        const groupsByCustomer = {};
+        dueSubscriptions.forEach(sub => {
+            const cid = sub.customer._id.toString();
+            if (!groupsByCustomer[cid]) groupsByCustomer[cid] = [];
+            groupsByCustomer[cid].push(sub);
+        });
+
+        // 3. Create one Order per customer
+        const customerIds = Object.keys(groupsByCustomer);
+        for (const cid of customerIds) {
+            try {
+                const subs = groupsByCustomer[cid];
+                const profile = await CustomerProfile.findOne({ user: cid });
+                const defaultAddr = profile ? profile.addresses.find(a => a.isDefaultDelivery) || profile.addresses[0] : null;
+
+                let itemsPrice = 0;
+                let taxPrice = 0;
+                const orderItems = [];
+
+                subs.forEach(s => {
+                    const price = s.quantity * s.product.price;
+                    const tax = price * (s.product.taxPercentage / 100);
+                    
+                    itemsPrice += price;
+                    taxPrice += tax;
+
+                    orderItems.push({
+                        name: s.product.name,
+                        quantity: s.quantity,
+                        image: s.product.image,
+                        price: s.product.price,
+                        product: s.product._id
+                    });
+                });
+
+                const order = new Order({
+                    customer: cid,
+                    // Link to the first subscription to maintain single-order ref compatibility
+                    subscription: subs[0]._id, 
+                    orderItems,
+                    itemsPrice,
+                    taxPrice,
+                    shippingPrice: 0,
+                    totalPrice: itemsPrice + taxPrice,
+                    shippingAddress: {
+                        address: defaultAddr ? `${defaultAddr.addressLine1}, ${defaultAddr.addressLine2 || ''}` : 'No address specified',
+                        city: defaultAddr ? defaultAddr.city : 'N/A',
+                        postalCode: defaultAddr ? defaultAddr.pincode : '000000',
+                        country: 'India'
+                    },
+                    orderType: 'Home Delivery',
+                    paymentMethod: 'Cash',
+                    isPaid: false,
+                    status: 'Pending'
+                });
+
+                await order.save();
+                createdOrdersCount++;
+            } catch (orderErr) {
+                console.error(`Error generating consolidated order:`, orderErr);
+                errorCount++;
+            }
+        }
+
+        res.json({
+            success: true,
+            createdOrdersCount,
+            totalSubscriptionsProcessed: dueSubscriptions.length,
+            message: `Generated ${createdOrdersCount} consolidated orders for ${dueSubscriptions.length} subscriptions.`
         });
     } catch (err) {
         next(err);

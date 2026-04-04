@@ -2,9 +2,13 @@ import React, { useState } from 'react';
 import { X, Calendar } from 'lucide-react';
 import api from '../services/api';
 
-const SubscriptionModal = ({ product, onClose }) => {
+const SubscriptionModal = ({ products = [], onClose }) => {
+  // If products is just a single object, wrap it in array
+  const items = Array.isArray(products) ? products : [products];
   const [frequency, setFrequency] = useState('Daily');
-  const [quantity, setQuantity] = useState(product.minSubscriptionQuantity || 1);
+  const [quantities, setQuantities] = useState(
+    items.reduce((acc, p) => ({ ...acc, [p._id]: p.minSubscriptionQuantity || 1 }), {})
+  );
   const [startDate, setStartDate] = useState('');
   const [customDays, setCustomDays] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -35,16 +39,19 @@ const SubscriptionModal = ({ product, onClose }) => {
       return;
     }
 
-    if (quantity < (product.minSubscriptionQuantity || 1)) {
-        setError(`Minimum quantity is ${product.minSubscriptionQuantity || 1}`);
+    const invalidQty = items.find(p => quantities[p._id] < (p.minSubscriptionQuantity || 1));
+    if (invalidQty) {
+        setError(`Minimum quantity for ${invalidQty.name} is ${invalidQty.minSubscriptionQuantity || 1}`);
         return;
     }
 
     try {
       setLoading(true);
-      await api.post('/subscriptions', {
-        product: product._id,
-        quantity,
+      await api.post('/subscriptions/bulk', {
+        items: items.map(p => ({
+            product: p._id,
+            quantity: quantities[p._id]
+        })),
         frequency,
         customDays: frequency === 'Custom days' ? customDays : [],
         startDate,
@@ -79,39 +86,46 @@ const SubscriptionModal = ({ product, onClose }) => {
                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                  <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                </div>
-               <h4 className="text-xl font-bold text-gray-900 mb-2">Subscription Active!</h4>
-               <p className="text-gray-500">Your subscription for {product.name} has been created successfully.</p>
-             </div>
+                <h4 className="text-xl font-bold text-gray-900 mb-2">Subscription Active!</h4>
+                <p className="text-gray-500">Your subscriptions for {items.length} item(s) have been created successfully.</p>
+              </div>
           ) : (
             <form onSubmit={handleSubscribe} className="space-y-5">
               {error && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">{error}</div>}
               
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Product</label>
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                   {product.image && product.image !== 'no-photo.jpg' ? (
-                       <img src={product.image} alt={product.name} className="w-12 h-12 object-cover rounded-lg" />
-                   ) : (
-                       <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center"><Calendar className="h-5 w-5 text-gray-400" /></div>
-                   )}
-                   <div>
-                       <p className="font-bold text-gray-900">{product.name}</p>
-                       <p className="text-sm text-gray-500">₹{product.price} / item</p>
-                   </div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    {items.length === 1 ? 'Product' : `Products (${items.length})`}
+                </label>
+                <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                    {items.map(p => (
+                        <div key={p._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            {p.image && p.image !== 'no-photo.jpg' ? (
+                                <img src={p.image} alt={p.name} className="w-10 h-10 object-cover rounded-lg" />
+                            ) : (
+                                <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center"><Calendar className="h-4 w-4 text-gray-400" /></div>
+                            )}
+                            <div className="flex-1">
+                                <p className="font-bold text-gray-900 text-sm">{p.name}</p>
+                                <div className="flex justify-between items-center mt-1">
+                                    <p className="text-[10px] text-gray-500">₹{p.price}/item</p>
+                                    <div className="flex items-center gap-2">
+                                        <label className="text-[10px] text-gray-400">Qty:</label>
+                                        <input
+                                            type="number"
+                                            min={p.minSubscriptionQuantity || 1}
+                                            value={quantities[p._id]}
+                                            onChange={(e) => setQuantities({ ...quantities, [p._id]: Number(e.target.value) })}
+                                            className="w-12 px-1 py-0.5 text-xs border border-gray-200 rounded text-center"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Quantity per delivery</label>
-                <input
-                  type="number"
-                  min={product.minSubscriptionQuantity || 1}
-                  value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
-                  className="w-full px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-xl focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-                  required
-                />
-              </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Start Date</label>

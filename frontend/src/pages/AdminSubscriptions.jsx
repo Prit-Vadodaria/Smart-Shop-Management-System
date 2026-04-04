@@ -6,7 +6,7 @@ const AdminSubscriptions = () => {
     const [subscriptions, setSubscriptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All');
+    const [statusFilter, setStatusFilter] = useState('Active');
     const [generating, setGenerating] = useState(false);
     const [message, setMessage] = useState(null);
 
