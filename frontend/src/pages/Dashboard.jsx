@@ -105,6 +105,7 @@ const StatCard = ({ title, value, icon: Icon, trend }) => (
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+  const [numberOfOrders, setNumberOfOrders] = useState(0);
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [isLowStockLoading, setIsLowStockLoading] = useState(false);
   const [assignedOrders, setAssignedOrders] = useState([]);
@@ -141,12 +142,23 @@ const Dashboard = () => {
     }
   };
 
+  const fetchNumberOfOrdersofCustomer = async () => {
+    if (user.role === 'Customer') {
+      try {
+        const { data } = await api.get('/orders/myorders');
+        setNumberOfOrders(data.length);
+      } catch (err) {
+        console.error('Error fetching number of orders of customer', err);
+      }
+    }
+  };
+
   const fetchAssignedOrders = async () => {
     if (user.role === 'Staff') {
       try {
         setIsOrdersLoading(true);
         const { data } = await api.get('/orders');
-        const sortedOrders = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10);
+        const sortedOrders = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setAssignedOrders(sortedOrders);
       } catch (err) {
         console.error('Error fetching assigned orders', err);
@@ -160,6 +172,7 @@ const Dashboard = () => {
     fetchLowStock();
     fetchAssignedOrders();
     fetchStats();
+    fetchNumberOfOrdersofCustomer();
   }, [user.role]);
 
   return (
@@ -245,12 +258,12 @@ const Dashboard = () => {
             />
             <StatCard
               title="Pending"
-              value={assignedOrders.filter(o => ['Pending', 'Packed'].includes(o.status)).length}
+              value={assignedOrders.filter(o => ['Pending', 'Packed', 'Pickup Ready', 'Ready to deliver'].includes(o.status)).length}
               icon={Clock}
             />
             <StatCard
               title="Deliveries"
-              value={assignedOrders.filter(o => ['Ready to deliver', 'Out for delivery', 'Delivered'].includes(o.status)).length}
+              value={assignedOrders.filter(o => ['Out for delivery', 'Delivered'].includes(o.status)).length}
               icon={Truck}
             />
           </div>
@@ -278,7 +291,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {assignedOrders.map((order) => (
+                {assignedOrders.slice(0, 10).map((order) => (
                   <div key={order._id} className="p-6 hover:bg-gray-50 transition-colors group">
                     <div className="flex flex-wrap justify-between items-center gap-4">
                       <div className="space-y-1">
@@ -315,9 +328,8 @@ const Dashboard = () => {
       ) : (
         // Customer Dashboard
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="Wallet Balance" value="₹120" icon={ShoppingBag} />
-          <StatCard title="Active Subscriptions" value="2" icon={FileText} />
-          <StatCard title="Total Orders" value="15" icon={Package} />
+          <StatCard title="Active Subscriptions" value="0" icon={FileText} />
+          <StatCard title="Total Orders" value={numberOfOrders} icon={Package} />
         </div>
       )}
     </div>
