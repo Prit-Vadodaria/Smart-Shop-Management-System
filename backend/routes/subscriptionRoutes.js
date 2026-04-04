@@ -4,7 +4,9 @@ import {
   getMySubscriptions,
   updateSubscriptionStatus,
   toggleVacationMode,
-  getActiveSubscriptions
+  getActiveSubscriptions,
+  getAllSubscriptions,
+  generateDailyOrders
 } from '../controllers/subscriptionController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -12,6 +14,12 @@ const router = express.Router();
 
 router.route('/')
   .post(protect, createSubscription)
+  .get(protect, authorize('Admin', 'Manager'), getAllSubscriptions);
+
+router.route('/generate-orders')
+  .post(protect, authorize('Admin', 'Manager'), generateDailyOrders);
+
+router.route('/active')
   .get(protect, authorize('Admin', 'Manager'), getActiveSubscriptions);
 
 router.route('/my-subscriptions')

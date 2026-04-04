@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { ShoppingCart, Search, Filter, ChevronDown, ArrowUpDown } from 'lucide-react';
+import { ShoppingCart, Search, Filter, ChevronDown, ArrowUpDown, CalendarClock } from 'lucide-react';
 import { CartContext } from '../context/CartContext';
-
-
+import SubscriptionModal from '../components/SubscriptionModal';
 
 const Shop = () => {
     const { addToCart } = React.useContext(CartContext);
@@ -12,6 +11,7 @@ const Shop = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All');
     const [sortOption, setSortOption] = useState('name-az');
+    const [subscriptionProduct, setSubscriptionProduct] = useState(null);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -146,12 +146,23 @@ const Shop = () => {
                                 <p className="text-gray-500 text-sm mb-4 line-clamp-2 leading-relaxed flex-grow">{product.description}</p>
                                 <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
                                     <span className="text-2xl font-black text-gray-900 tracking-tight">₹{product.price}</span>
-                                    <button 
-                                        onClick={() => addToCart(product)}
-                                        className="bg-primary-600 hover:bg-primary-700 text-white rounded-xl p-2.5 shadow-md shadow-primary-500/30 transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
-                                    >
-                                        <ShoppingCart className="h-5 w-5" />
-                                    </button>
+                                    <div className="flex gap-2">
+                                        {product.isSubscriptionEligible && (
+                                            <button 
+                                                onClick={() => setSubscriptionProduct(product)}
+                                                className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl p-2.5 shadow-sm transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
+                                                title="Subscribe to this product"
+                                            >
+                                                <CalendarClock className="h-5 w-5" />
+                                            </button>
+                                        )}
+                                        <button 
+                                            onClick={() => addToCart(product)}
+                                            className="bg-primary-600 hover:bg-primary-700 text-white rounded-xl p-2.5 shadow-md shadow-primary-500/30 transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
+                                        >
+                                            <ShoppingCart className="h-5 w-5" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -164,6 +175,13 @@ const Shop = () => {
                         </div>
                     )}
                 </div>
+            )}
+            
+            {subscriptionProduct && (
+                <SubscriptionModal 
+                    product={subscriptionProduct} 
+                    onClose={() => setSubscriptionProduct(null)} 
+                />
             )}
         </div>
     );

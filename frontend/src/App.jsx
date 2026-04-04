@@ -14,6 +14,8 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import MyOrders from './pages/MyOrders';
 import StoreOrders from './pages/StoreOrders';
+import MySubscriptions from './pages/MySubscriptions';
+import AdminSubscriptions from './pages/AdminSubscriptions';
 
 function App() {
   return (
@@ -25,7 +27,7 @@ function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            
+
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
@@ -65,6 +67,18 @@ function App() {
             <Route path="/store-orders" element={
               <ProtectedRoute roles={['Admin', 'Manager', 'Staff']}>
                 <StoreOrders />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/my-subscriptions" element={
+              <ProtectedRoute roles={['Customer']}>
+                <MySubscriptions />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/subscriptions" element={
+              <ProtectedRoute roles={['Admin', 'Manager']}>
+                <AdminSubscriptions />
               </ProtectedRoute>
             } />
 

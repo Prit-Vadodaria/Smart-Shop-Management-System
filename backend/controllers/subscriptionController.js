@@ -1,5 +1,7 @@
 import Subscription from '../models/Subscription.js';
 import Product from '../models/Product.js';
+import Order from '../models/Order.js';
+import CustomerProfile from '../models/CustomerProfile.js';
 
 // @desc    Create new subscription
 // @route   POST /api/subscriptions
@@ -110,7 +112,7 @@ export const toggleVacationMode = async (req, res, next) => {
 };
 
 // @desc    Get all active subscriptions (for admin to generate daily orders)
-// @route   GET /api/subscriptions
+// @route   GET /api/subscriptions/active
 // @access  Private/Admin/Manager
 export const getActiveSubscriptions = async (req, res, next) => {
   try {
@@ -119,4 +121,134 @@ export const getActiveSubscriptions = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// @desc    Get all subscriptions (for admin to manage)
+// @route   GET /api/subscriptions
+// @access  Private/Admin/Manager
+export const getAllSubscriptions = async (req, res, next) => {
+  try {
+    const subscriptions = await Subscription.find().sort('-createdAt').populate('customer').populate('product');
+    res.json(subscriptions);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Automatically generate orders for today from active subscriptions
+// @route   POST /api/subscriptions/generate-orders
+// @access  Private/Admin/Manager
+export const generateDailyOrders = async (req, res, next) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const currentDayName = dayNames[today.getDay()];
+
+        const activeSubscriptions = await Subscription.find({ status: 'Active' })
+            .populate('product')
+            .populate('customer');
+
+        let createdCount = 0;
+        let skippedCount = 0;
+        let errorCount = 0;
+
+        for (const sub of activeSubscriptions) {
+            try {
+                // Safety Check: Avoid crashing if customer or product reference is broken
+                if (!sub.customer || !sub.product) {
+                    console.warn(`Skipping subscription ${sub._id} due to missing customer or product reference.`);
+                    skippedCount++;
+                    continue;
+                }
+
+            // 1. Basic vacation check
+            if (sub.vacationMode && sub.vacationMode.isOn) {
+                const start = new Date(sub.vacationMode.startDate);
+                const end = new Date(sub.vacationMode.endDate);
+                if (today >= start && today <= end) {
+                    skippedCount++;
+                    continue;
+                }
+            }
+
+            // 2. Frequency logic
+            let isDue = false;
+            if (sub.frequency === 'Daily') {
+                isDue = true;
+            } else if (sub.frequency === 'Alternate days') {
+                const startDate = new Date(sub.startDate);
+                startDate.setHours(0,0,0,0);
+                const diffTime = Math.abs(today - startDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays % 2 === 0) isDue = true;
+            } else if (sub.frequency === 'Custom days') {
+                if (sub.customDays.includes(currentDayName)) isDue = true;
+            }
+
+            if (!isDue) continue;
+
+            // 3. Skip if already generated an order for this sub today
+            const alreadyGenerated = await Order.findOne({
+                subscription: sub._id,
+                createdAt: { $gte: today }
+            });
+            if (alreadyGenerated) continue;
+
+            // 4. Get default shipping address
+            const profile = await CustomerProfile.findOne({ user: sub.customer._id });
+            const defaultAddr = profile ? profile.addresses.find(a => a.isDefaultDelivery) || profile.addresses[0] : null;
+
+            if (!defaultAddr) {
+                console.warn(`No address found for customer ${sub.customer.name}, using placeholders.`);
+            }
+
+            const itemsPrice = sub.quantity * sub.product.price;
+            const taxPrice = itemsPrice * (sub.product.taxPercentage / 100);
+            const totalPrice = itemsPrice + taxPrice;
+
+            const order = new Order({
+                customer: sub.customer._id,
+                subscription: sub._id,
+                orderItems: [{
+                    name: sub.product.name,
+                    quantity: sub.quantity,
+                    image: sub.product.image,
+                    price: sub.product.price,
+                    product: sub.product._id
+                }],
+                itemsPrice,
+                taxPrice,
+                shippingPrice: 0,
+                totalPrice,
+                shippingAddress: {
+                    address: defaultAddr ? `${defaultAddr.addressLine1}, ${defaultAddr.addressLine2 || ''}` : 'No address specified',
+                    city: defaultAddr ? defaultAddr.city : 'N/A',
+                    postalCode: defaultAddr ? defaultAddr.pincode : '000000',
+                    country: 'India'
+                },
+                orderType: 'Home Delivery',
+                paymentMethod: 'Cash', // Default for subscription for simplicity, or "UPI"
+                isPaid: false,
+                status: 'Pending'
+            });
+
+                await order.save();
+                createdCount++;
+            } catch (loopErr) {
+                console.error(`Error generating order for subscription ${sub._id}:`, loopErr);
+                errorCount++;
+            }
+        }
+
+        res.json({ 
+            success: true, 
+            createdCount, 
+            skippedCount,
+            errorCount,
+            message: `System generated ${createdCount} orders for today's deliveries.` 
+        });
+    } catch (err) {
+        next(err);
+    }
 };

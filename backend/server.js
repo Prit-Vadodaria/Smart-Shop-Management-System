@@ -13,6 +13,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import supplierRoutes from './routes/supplierRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 // Load env vars
 dotenv.config();
@@ -40,6 +41,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Test route
 app.get('/api/health', (req, res) => {

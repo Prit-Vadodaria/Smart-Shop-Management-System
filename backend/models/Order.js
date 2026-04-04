@@ -81,6 +81,16 @@ const OrderSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null
+  },
+  subscription: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subscription',
+    default: null
+  },
+  itemsPrice: {
+    type: Number,
+    required: true,
+    default: 0.0
   }
 }, {
   timestamps: true

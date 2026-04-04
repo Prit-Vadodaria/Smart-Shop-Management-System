@@ -1,5 +1,6 @@
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
+import Notification from '../models/Notification.js';
 
 // Helper to update stock
 const updateStock = async (orderItems, increment = true) => {
@@ -198,6 +199,16 @@ export const assignOrderToStaff = async (req, res, next) => {
 
       order.assignedTo = staffId || null;
       const updatedOrder = await order.save();
+
+      // Notify the staff member
+      if (staffId) {
+        await Notification.create({
+          user: staffId,
+          title: 'New Order Assigned',
+          message: `You have been assigned to order ORD-${order._id.toString().substring(order._id.toString().length-8).toUpperCase()} for delivery.`,
+          relatedId: order._id.toString()
+        });
+      }
 
       const populatedOrder = await Order.findById(updatedOrder._id)
         .populate('customer', 'id name')
