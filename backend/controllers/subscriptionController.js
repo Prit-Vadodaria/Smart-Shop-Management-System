@@ -3,282 +3,227 @@ import Product from '../models/Product.js';
 import Order from '../models/Order.js';
 import CustomerProfile from '../models/CustomerProfile.js';
 
-// @desc    Create new subscription
-// @route   POST /api/subscriptions
+// @desc    Get user subscription lists (Daily, Alternate, Monthly)
+// @route   GET /api/subscriptions/my-lists
 // @access  Private
-export const createSubscription = async (req, res, next) => {
+export const getMySubscriptionLists = async (req, res, next) => {
   try {
-    const { product, quantity, frequency, customDays, startDate, endDate } = req.body;
+    const listTypes = ['Daily', 'Alternate', 'Monthly'];
+    const lists = [];
 
-    const prod = await Product.findById(product);
+    for (const type of listTypes) {
+      let list = await Subscription.findOne({ customer: req.user._id, type })
+        .populate('items.product');
 
-    if (!prod) {
+      if (!list) {
+        // Create an empty list if it doesn't exist
+        list = await Subscription.create({
+          customer: req.user._id,
+          type,
+          items: [],
+          startDate: new Date()
+        });
+      }
+      lists.push(list);
+    }
+    res.json(lists);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update items in a specific subscription list
+// @route   PUT /api/subscriptions/:id/items
+// @access  Private
+export const updateSubscriptionListItems = async (req, res, next) => {
+  try {
+    const { items } = req.body; // Array of { product, quantity }
+    const list = await Subscription.findById(req.params.id);
+
+    if (!list) {
       res.status(404);
-      throw new Error('Product not found');
+      throw new Error('Subscription list not found');
     }
 
-    if (!prod.isSubscriptionEligible) {
-      res.status(400);
-      throw new Error('Product is not eligible for subscription');
+    if (list.customer.toString() !== req.user._id.toString()) {
+      res.status(401);
+      throw new Error('Not authorized');
     }
 
-    if (quantity < prod.minSubscriptionQuantity) {
-      res.status(400);
-      throw new Error(`Minimum subscription quantity is ${prod.minSubscriptionQuantity}`);
-    }
-
-    const subscription = new Subscription({
-      customer: req.user._id,
-      product,
-      quantity,
-      frequency,
-      customDays,
-      startDate,
-      endDate
-    });
-
-    const createdSubscription = await subscription.save();
-    res.status(201).json(createdSubscription);
+    list.items = items;
+    await list.save();
+    
+    // Refresh with populated product
+    const updated = await Subscription.findById(list._id).populate('items.product');
+    res.json(updated);
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Create bulk subscriptions
-// @route   POST /api/subscriptions/bulk
+// @desc    Update subscription list settings (status, dates, frequency)
+// @route   PUT /api/subscriptions/:id/settings
 // @access  Private
-export const createBulkSubscriptions = async (req, res, next) => {
-    try {
-        const { items, frequency, customDays, startDate, endDate } = req.body;
-
-        if (!items || items.length === 0) {
-            res.status(400);
-            throw new Error('No items provided for subscription');
-        }
-
-        const subscriptions = [];
-        for (const item of items) {
-            const prod = await Product.findById(item.product);
-            if (!prod) continue;
-            if (!prod.isSubscriptionEligible) continue;
-
-            const subscription = new Subscription({
-                customer: req.user._id,
-                product: item.product,
-                quantity: item.quantity || prod.minSubscriptionQuantity || 1,
-                frequency,
-                customDays,
-                startDate,
-                endDate
-            });
-            subscriptions.push(await subscription.save());
-        }
-
-        res.status(201).json(subscriptions);
-    } catch (error) {
-        next(error);
-    }
-};
-
-// @desc    Get logged in user subscriptions
-// @route   GET /api/subscriptions/my-subscriptions
-// @access  Private
-export const getMySubscriptions = async (req, res, next) => {
+export const updateSubscriptionListSettings = async (req, res, next) => {
   try {
-    const subscriptions = await Subscription.find({ customer: req.user._id }).populate('product');
-    res.json(subscriptions);
-  } catch (error) {
-    next(error);
-  }
-};
+    const { status, startDate, customDates, vacationMode } = req.body;
+    const list = await Subscription.findById(req.params.id);
 
-// @desc    Update subscription status (pause/resume/cancel)
-// @route   PUT /api/subscriptions/:id/status
-// @access  Private
-export const updateSubscriptionStatus = async (req, res, next) => {
-  try {
-    const { status } = req.body;
-    const subscription = await Subscription.findById(req.params.id);
-
-    if (!subscription) {
+    if (!list) {
       res.status(404);
-      throw new Error('Subscription not found');
+      throw new Error('Subscription list not found');
     }
 
-    // Checking if user owns it or if they are admin
-    if (subscription.customer.toString() !== req.user._id.toString() && req.user.role === 'Customer') {
-       res.status(403);
-       throw new Error('Not authorized to update this subscription');
+    if (list.customer.toString() !== req.user._id.toString() && req.user.role !== 'Admin' && req.user.role !== 'Manager') {
+      res.status(401);
+      throw new Error('Not authorized');
     }
 
-    subscription.status = status;
-    const updatedSubscription = await subscription.save();
+    if (status) list.status = status;
+    if (startDate) list.startDate = startDate;
+    if (customDates) list.customDates = customDates;
+    if (vacationMode) list.vacationMode = vacationMode;
 
-    res.json(updatedSubscription);
+    await list.save();
+    res.json(list);
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Toggle Vacation Mode
-// @route   PUT /api/subscriptions/:id/vacation
-// @access  Private
-export const toggleVacationMode = async (req, res, next) => {
-    try {
-        const { isOn, startDate, endDate } = req.body;
-        const subscription = await Subscription.findById(req.params.id);
-        
-        if (!subscription) {
-            res.status(404);
-            throw new Error('Subscription not found');
-        }
-
-        if (subscription.customer.toString() !== req.user._id.toString() && req.user.role === 'Customer') {
-            res.status(403);
-            throw new Error('Not authorized');
-        }
-
-        subscription.vacationMode = { isOn, startDate, endDate };
-        await subscription.save();
-
-        res.json({ success: true, vacationMode: subscription.vacationMode });
-    } catch (error) {
-        next(error);
-    }
-};
-
-// @desc    Get all active subscriptions (for admin to generate daily orders)
+// @desc    Get all active subscription lists (for admin)
 // @route   GET /api/subscriptions/active
 // @access  Private/Admin/Manager
 export const getActiveSubscriptions = async (req, res, next) => {
   try {
-    const subscriptions = await Subscription.find({ status: 'Active' }).populate('customer').populate('product');
-    res.json(subscriptions);
+    const lists = await Subscription.find({ 
+        status: 'Active',
+        items: { $exists: true, $ne: [] } 
+    })
+      .populate('customer', 'name email mobile')
+      .populate('items.product');
+    res.json(lists);
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get all subscriptions (for admin to manage)
+// @desc    Get all subscription lists (for admin)
 // @route   GET /api/subscriptions
 // @access  Private/Admin/Manager
 export const getAllSubscriptions = async (req, res, next) => {
   try {
-    const subscriptions = await Subscription.find().sort('-createdAt').populate('customer').populate('product');
-    res.json(subscriptions);
+    const lists = await Subscription.find({ 
+        items: { $exists: true, $ne: [] } 
+    })
+      .sort('-createdAt')
+      .populate('customer', 'name email mobile')
+      .populate('items.product');
+    res.json(lists);
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Automatically generate orders for today from active subscriptions
+// @desc    Automatically generate orders for today from active subscription lists
 // @route   POST /api/subscriptions/generate-orders
 // @access  Private/Admin/Manager
 export const generateDailyOrders = async (req, res, next) => {
     try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const currentDayName = dayNames[today.getDay()];
+        const dayOfMonth = today.getDate();
 
-        const activeSubscriptions = await Subscription.find({ status: 'Active' })
-            .populate('product')
+        const activeLists = await Subscription.find({ status: 'Active' })
+            .populate('items.product')
             .populate('customer');
 
         let createdOrdersCount = 0;
-        let skippedSubscriptionsCount = 0;
         let errorCount = 0;
 
-        // 1. Identify which subscriptions are due today
-        const dueSubscriptions = [];
-
-        for (const sub of activeSubscriptions) {
+        for (const list of activeLists) {
             try {
-                if (!sub.customer || !sub.product) {
-                    skippedSubscriptionsCount++;
-                    continue;
-                }
+                if (!list.customer || !list.items || list.items.length === 0) continue;
 
-                const startDate = new Date(sub.startDate);
+                const startDate = new Date(list.startDate);
                 startDate.setHours(0, 0, 0, 0);
 
+                // 1. Basic guard checks
                 if (today < startDate) continue;
 
-                if (sub.vacationMode && sub.vacationMode.isOn) {
-                    const vStart = new Date(sub.vacationMode.startDate);
-                    const vEnd = new Date(sub.vacationMode.endDate);
-                    if (today >= vStart && today <= vEnd) {
-                        skippedSubscriptionsCount++;
-                        continue;
-                    }
+                if (list.vacationMode && list.vacationMode.isOn) {
+                    const start = new Date(list.vacationMode.startDate);
+                    const end = new Date(list.vacationMode.endDate);
+                    if (today >= start && today <= end) continue;
                 }
 
+                // 2. Frequency logic
                 let isDue = false;
-                if (sub.frequency === 'Daily') isDue = true;
-                else if (sub.frequency === 'Alternate days') {
+                if (list.type === 'Daily') {
+                    isDue = true;
+                } else if (list.type === 'Alternate') {
                     const diffTime = Math.abs(today - startDate);
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                     if (diffDays % 2 === 0) isDue = true;
-                } else if (sub.frequency === 'Custom days') {
-                    if (sub.customDays.includes(currentDayName)) isDue = true;
+                } else if (list.type === 'Monthly') {
+                    if (list.customDates.includes(dayOfMonth)) isDue = true;
                 }
 
                 if (!isDue) continue;
 
-                // Check if this specific subscription already has an order generated for today
+                // 3. Skip if already generated order today for this type
                 const alreadyGenerated = await Order.findOne({
-                    subscription: sub._id,
+                    customer: list.customer._id,
+                    orderItems: { $exists: true, $ne: [] },
+                    createdAt: { $gte: today },
+                    status: { $ne: 'Cancelled' }
+                    // Note: In an ideal case, one type should create one order. 
+                    // To handle multiple types on same day (e.g. Monthly + Daily), 
+                    // we could separate them or consolidate. 
+                    // For now, let's keep them separate per type if alreadyGenerated has that type metadata.
+                });
+                
+                // Better Check: Avoid duplicate for this exact list per today
+                // We'll rely on the subscription ref linked to the first list item's order
+                const exactOrder = await Order.findOne({
+                    customer: list.customer._id,
+                    subscription: list._id,
                     createdAt: { $gte: today }
                 });
-                if (alreadyGenerated) continue;
+                if (exactOrder) continue;
 
-                dueSubscriptions.push(sub);
-            } catch (err) {
-                console.error('Error processing sub during due-check:', err);
-                errorCount++;
-            }
-        }
-
-        // 2. Group due subscriptions by customer
-        const groupsByCustomer = {};
-        dueSubscriptions.forEach(sub => {
-            const cid = sub.customer._id.toString();
-            if (!groupsByCustomer[cid]) groupsByCustomer[cid] = [];
-            groupsByCustomer[cid].push(sub);
-        });
-
-        // 3. Create one Order per customer
-        const customerIds = Object.keys(groupsByCustomer);
-        for (const cid of customerIds) {
-            try {
-                const subs = groupsByCustomer[cid];
-                const profile = await CustomerProfile.findOne({ user: cid });
+                // 4. Create Order
+                const profile = await CustomerProfile.findOne({ user: list.customer._id });
                 const defaultAddr = profile ? profile.addresses.find(a => a.isDefaultDelivery) || profile.addresses[0] : null;
 
                 let itemsPrice = 0;
                 let taxPrice = 0;
                 const orderItems = [];
 
-                subs.forEach(s => {
-                    const price = s.quantity * s.product.price;
-                    const tax = price * (s.product.taxPercentage / 100);
-                    
+                for (const item of list.items) {
+                    const product = item.product;
+                    if (!product) continue;
+
+                    const price = item.quantity * product.price;
+                    const tax = price * (product.taxPercentage / 100);
+
                     itemsPrice += price;
                     taxPrice += tax;
 
                     orderItems.push({
-                        name: s.product.name,
-                        quantity: s.quantity,
-                        image: s.product.image,
-                        price: s.product.price,
-                        product: s.product._id
+                        name: product.name,
+                        quantity: item.quantity,
+                        image: product.image,
+                        price: product.price,
+                        product: product._id
                     });
-                });
+                }
+
+                if (orderItems.length === 0) continue;
 
                 const order = new Order({
-                    customer: cid,
-                    // Link to the first subscription to maintain single-order ref compatibility
-                    subscription: subs[0]._id, 
+                    customer: list.customer._id,
+                    subscription: list._id,
                     orderItems,
                     itemsPrice,
                     taxPrice,
@@ -298,19 +243,19 @@ export const generateDailyOrders = async (req, res, next) => {
 
                 await order.save();
                 createdOrdersCount++;
-            } catch (orderErr) {
-                console.error(`Error generating consolidated order:`, orderErr);
+            } catch (err) {
+                console.error(`Error processing list ${list._id}:`, err);
                 errorCount++;
             }
         }
 
-        res.json({
-            success: true,
-            createdOrdersCount,
-            totalSubscriptionsProcessed: dueSubscriptions.length,
-            message: `Generated ${createdOrdersCount} consolidated orders for ${dueSubscriptions.length} subscriptions.`
-        });
+        res.json({ success: true, createdOrdersCount, errorCount, message: `System generated ${createdOrdersCount} consolidated orders.` });
     } catch (err) {
         next(err);
     }
 };
+
+// @desc    Add/Update item in any list by product ID (Legacy support/Direct add)
+// @route   POST /api/subscriptions/add-item
+// @access  Private
+// Not strictly needed with the new UI plan, but useful.

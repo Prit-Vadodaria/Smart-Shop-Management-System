@@ -1,11 +1,6 @@
 import mongoose from 'mongoose';
 
-const SubscriptionSchema = new mongoose.Schema({
-  customer: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
+const SubscriptionItemSchema = new mongoose.Schema({
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
@@ -15,31 +10,36 @@ const SubscriptionSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 1
-  },
-  frequency: {
-    type: String,
-    enum: ['Daily', 'Alternate days', 'Custom days'],
+  }
+});
+
+const SubscriptionSchema = new mongoose.Schema({
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true
   },
-  customDays: [{
+  type: {
     type: String,
-    enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-  }], // Used only if frequency is 'Custom days'
+    enum: ['Daily', 'Alternate', 'Monthly'],
+    required: true
+  },
+  items: [SubscriptionItemSchema],
   startDate: {
     type: Date,
-    required: true
+    required: true,
+    default: Date.now
   },
-  endDate: {
-    type: Date
+  // Used for 'Monthly' type - days of the month (1-31)
+  customDates: {
+    type: [Number],
+    default: []
   },
   status: {
     type: String,
     enum: ['Active', 'Paused', 'Cancelled'],
     default: 'Active'
   },
-  skippedDates: [{
-    type: Date
-  }],
   vacationMode: {
     isOn: { type: Boolean, default: false },
     startDate: { type: Date },
@@ -48,5 +48,8 @@ const SubscriptionSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// A customer can only have one list per type
+SubscriptionSchema.index({ customer: 1, type: 1 }, { unique: true });
 
 export default mongoose.model('Subscription', SubscriptionSchema);

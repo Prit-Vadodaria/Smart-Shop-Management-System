@@ -114,7 +114,8 @@ const Dashboard = () => {
     totalInventoryValue: 0,
     totalProductsInStock: 0,
     totalCustomers: 0,
-    activeSubscriptions: 0
+    activeSubscriptions: 0,
+    mySubscriptions: 0
   });
 
   const fetchStats = async () => {
@@ -153,6 +154,18 @@ const Dashboard = () => {
     }
   };
 
+  const fetchMySubscriptionsCount = async () => {
+    if (user.role === 'Customer') {
+      try {
+        const { data } = await api.get('/subscriptions/my-lists');
+        const activeCount = data.filter(l => l.items?.length > 0 && l.status === 'Active').length;
+        setStats(prev => ({ ...prev, mySubscriptions: activeCount }));
+      } catch (err) {
+        console.error('Error fetching my subscriptions count', err);
+      }
+    }
+  };
+
   const fetchAssignedOrders = async () => {
     if (user.role === 'Staff') {
       try {
@@ -173,6 +186,7 @@ const Dashboard = () => {
     fetchAssignedOrders();
     fetchStats();
     fetchNumberOfOrdersofCustomer();
+    fetchMySubscriptionsCount();
   }, [user.role]);
 
   return (
@@ -328,7 +342,7 @@ const Dashboard = () => {
       ) : (
         // Customer Dashboard
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="Active Subscriptions" value="0" icon={FileText} />
+          <StatCard title="My Active Schedules" value={stats.mySubscriptions} icon={FileText} />
           <StatCard title="Total Orders" value={numberOfOrders} icon={Package} />
         </div>
       )}

@@ -1,10 +1,8 @@
 import express from 'express';
 import {
-  createSubscription,
-  createBulkSubscriptions,
-  getMySubscriptions,
-  updateSubscriptionStatus,
-  toggleVacationMode,
+  getMySubscriptionLists,
+  updateSubscriptionListItems,
+  updateSubscriptionListSettings,
   getActiveSubscriptions,
   getAllSubscriptions,
   generateDailyOrders
@@ -14,25 +12,21 @@ import { protect, authorize } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.route('/')
-  .post(protect, createSubscription)
   .get(protect, authorize('Admin', 'Manager'), getAllSubscriptions);
-
-router.route('/generate-orders')
-  .post(protect, authorize('Admin', 'Manager'), generateDailyOrders);
 
 router.route('/active')
   .get(protect, authorize('Admin', 'Manager'), getActiveSubscriptions);
 
-router.route('/bulk')
-  .post(protect, createBulkSubscriptions);
+router.route('/generate-orders')
+  .post(protect, authorize('Admin', 'Manager'), generateDailyOrders);
 
-router.route('/my-subscriptions')
-  .get(protect, getMySubscriptions);
+router.route('/my-lists')
+  .get(protect, getMySubscriptionLists);
 
-router.route('/:id/status')
-  .put(protect, updateSubscriptionStatus);
+router.route('/:id/items')
+  .put(protect, updateSubscriptionListItems);
 
-router.route('/:id/vacation')
-  .put(protect, toggleVacationMode);
+router.route('/:id/settings')
+  .put(protect, updateSubscriptionListSettings);
 
 export default router;

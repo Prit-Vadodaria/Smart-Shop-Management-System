@@ -263,3 +263,27 @@ export const cancelOrder = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Delete an order
+// @route   DELETE /api/orders/:id
+// @access  Private/Admin
+export const deleteOrder = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id);
+
+    if (order) {
+      if (['Admin', 'Manager'].includes(req.user.role)) {
+        await Order.deleteOne({ _id: order._id });
+        res.json({ success: true, message: 'Order deleted successfully' });
+      } else {
+        res.status(401);
+        throw new Error('Not authorized to delete orders');
+      }
+    } else {
+      res.status(404);
+      throw new Error('Order not found');
+    }
+  } catch (error) {
+    next(error);
+  }
+};

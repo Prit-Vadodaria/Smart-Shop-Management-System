@@ -61,8 +61,11 @@ export const getDashboardStats = async (req, res, next) => {
     // Total Customers: Count users with role 'Customer'
     const totalCustomers = await User.countDocuments({ role: 'Customer' });
     
-    // Active Subscriptions: Count active subscriptions (status: 'Active')
-    const activeSubscriptions = await Subscription.countDocuments({ status: 'Active' });
+    // Active Subscriptions: Count active, non-empty subscription lists
+    const activeSubscriptions = await Subscription.countDocuments({ 
+        status: 'Active',
+        items: { $exists: true, $ne: [] }
+    });
 
     res.json({
       success: true,

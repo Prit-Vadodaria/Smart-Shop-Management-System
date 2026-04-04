@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { Package, Truck, Store, MapPin, CheckCircle, Clock, Search, Filter } from 'lucide-react';
+import { Package, Truck, Store, MapPin, CheckCircle, Clock, Search, Filter, Trash2 } from 'lucide-react';
 import api from '../services/api';
 
 const StoreOrders = () => {
@@ -54,6 +54,17 @@ const StoreOrders = () => {
         } catch (error) {
             console.error('Error changing status:', error);
             alert('Failed to update status.');
+        }
+    };
+
+    const deleteOrder = async (orderId) => {
+        if (!window.confirm('Are you sure you want to PERMANENTLY delete this order? This cannot be undone.')) return;
+        try {
+            await api.delete(`/orders/${orderId}`);
+            setOrders(orders.filter(o => o._id !== orderId));
+        } catch (error) {
+            console.error('Error deleting order:', error);
+            alert('Failed to delete order.');
         }
     };
 
@@ -181,6 +192,16 @@ const StoreOrders = () => {
                                                 </span>
                                             )}
                                         </div>
+
+                                        {isManagement && (
+                                            <button 
+                                                onClick={() => deleteOrder(order._id)}
+                                                className="p-2 text-gray-300 hover:text-red-500 transition-colors"
+                                                title="Permanently Delete Order"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        )}
 
                                     </div>
                                 </div>

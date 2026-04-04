@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { ShoppingCart, Search, Filter, ChevronDown, ArrowUpDown, CalendarClock } from 'lucide-react';
+import { ShoppingCart, Search, Filter, ChevronDown, ArrowUpDown, CalendarClock, CheckCircle } from 'lucide-react';
 import { CartContext } from '../context/CartContext';
-import SubscriptionModal from '../components/SubscriptionModal';
 
 const Shop = () => {
     const { addToCart } = React.useContext(CartContext);
@@ -11,8 +10,6 @@ const Shop = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All');
     const [sortOption, setSortOption] = useState('name-az');
-    const [subscriptionProduct, setSubscriptionProduct] = useState(null);
-    const [selectedProducts, setSelectedProducts] = useState([]);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -29,208 +26,120 @@ const Shop = () => {
         fetchProducts();
     }, []);
 
-    // Extract unique categories for filter
     const categories = ['All', ...new Set(products.map(p => p.category))];
 
-    // Sorting and Filtering Logic
     const sortedAndFilteredProducts = () => {
         let items = [...products];
-
-        // 1. Filter by category
         if (categoryFilter !== 'All') {
             items = items.filter(p => p.category === categoryFilter);
         }
-
-        // 2. Filter by search term
         if (searchTerm) {
             items = items.filter(p => 
                 p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 p.description.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
-
-        // 3. Sort items
         items.sort((a, b) => {
-            if (sortOption === 'price-low-high') {
-                return a.price - b.price;
-            } else if (sortOption === 'price-high-low') {
-                return b.price - a.price;
-            } else if (sortOption === 'name-az') {
-                return a.name.localeCompare(b.name);
-            } else if (sortOption === 'name-za') {
-                return b.name.localeCompare(a.name);
-            }
+            if (sortOption === 'price-low-high') return a.price - b.price;
+            if (sortOption === 'price-high-low') return b.price - a.price;
+            if (sortOption === 'name-az') return a.name.localeCompare(b.name);
+            if (sortOption === 'name-za') return b.name.localeCompare(a.name);
             return 0;
         });
-
         return items;
     };
 
     const filteredProducts = sortedAndFilteredProducts();
 
-    const toggleSelect = (product) => {
-        if (selectedProducts.find(p => p._id === product._id)) {
-            setSelectedProducts(selectedProducts.filter(p => p._id !== product._id));
-        } else {
-            setSelectedProducts([...selectedProducts, product]);
-        }
-    };
-
-    const isSelected = (id) => selectedProducts.find(p => p._id === id);
-
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                <h1 className="text-3xl font-bold text-gray-900">Browse Products</h1>
+                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Grocery Market</h1>
 
                 <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-                    {/* Search */}
                     <div className="relative w-full sm:w-64">
                         <input
                             type="text"
-                            placeholder="Search grocery items..."
-                            className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white shadow-sm transition-all"
+                            placeholder="Search fresh items..."
+                            className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white shadow-sm transition-all text-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                        <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                        <Search className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
                     </div>
 
-                    {/* Category Filter */}
                     <div className="relative w-full sm:w-44">
                         <select
                             value={categoryFilter}
                             onChange={(e) => setCategoryFilter(e.target.value)}
-                            className="appearance-none w-full pl-10 pr-8 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white shadow-sm transition-all cursor-pointer text-sm font-medium text-gray-700"
+                            className="appearance-none w-full pl-10 pr-8 py-2.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white shadow-sm transition-all cursor-pointer text-sm font-medium text-gray-700"
                         >
                             {categories.map(cat => (
                                 <option key={cat} value={cat}>{cat}</option>
                             ))}
                         </select>
-                        <Filter className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                        <ChevronDown className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
-                    </div>
-
-                    {/* Sort */}
-                    <div className="relative w-full sm:w-44">
-                        <select
-                            value={sortOption}
-                            onChange={(e) => setSortOption(e.target.value)}
-                            className="appearance-none w-full pl-10 pr-8 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white shadow-sm transition-all cursor-pointer text-sm font-medium text-gray-700"
-                        >
-                            <option value="name-az">A - Z</option>
-                            <option value="name-za">Z - A</option>
-                            <option value="price-low-high">Price: Low to High</option>
-                            <option value="price-high-low">Price: High to Low</option>
-                        </select>
-                        <ArrowUpDown className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                        <ChevronDown className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+                        <Filter className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
+                        <ChevronDown className="absolute right-3.5 top-3.5 h-3 w-3 text-gray-400 pointer-events-none" />
                     </div>
                 </div>
             </div>
 
             {loading ? (
-                <div className="flex justify-center items-center py-20">
+                <div className="flex justify-center items-center py-24">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                     {filteredProducts.map(product => (
-                        <div key={product._id} className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col">
-                            <div className="relative w-full h-52 bg-gray-50 overflow-hidden">
+                        <div key={product._id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group flex flex-col">
+                            <div className="relative w-full h-56 overflow-hidden bg-gray-50">
                                 {(product.image && product.image !== 'no-photo.jpg') || product.imageUrl ? (
-                                    <img src={product.image || product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out" />
+                                    <img src={product.image || product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center group-hover:scale-110 transition-transform duration-500 ease-out bg-gray-100">
-                                        <ShoppingCart className="h-12 w-12 text-gray-300" />
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                        <ShoppingCart className="h-12 w-12 text-gray-200" />
                                     </div>
                                 )}
                                 {product.isSubscriptionEligible && (
-                                    <div className="absolute top-3 left-3 z-10">
-                                        <label className="flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={!!isSelected(product._id)}
-                                                onChange={() => toggleSelect(product)}
-                                                className="w-6 h-6 rounded-lg text-primary-600 border-white/50 focus:ring-primary-500 bg-white/20 backdrop-blur-md cursor-pointer transition-all border-2"
-                                            />
-                                        </label>
+                                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 border border-primary-50 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+                                        <CalendarClock className="h-3.5 w-3.5 text-primary-600" />
+                                        <span className="text-[10px] font-bold text-gray-900 uppercase tracking-wider">Subscription Ready</span>
                                     </div>
                                 )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                             </div>
-                            <div className="p-5 flex flex-col flex-grow">
-                                <div className="flex justify-between items-start mb-3">
-                                    <h3 className="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-primary-600 transition-colors">{product.name}</h3>
-                                    <span className="bg-primary-50 text-primary-700 text-[10px] uppercase px-2 py-1 rounded-full font-bold tracking-wider shadow-sm border border-primary-100 whitespace-nowrap ml-2">
-                                        {product.category}
-                                    </span>
+                            
+                            <div className="p-6 flex flex-col flex-grow">
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary-600 mb-1 block">{product.category}</span>
+                                    {product.isSubscriptionEligible && <CheckCircle className="h-4 w-4 text-green-500" title="Eligible for subscription" />}
                                 </div>
-                                <p className="text-gray-500 text-sm mb-4 line-clamp-2 leading-relaxed flex-grow">{product.description}</p>
-                                <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
+                                <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors line-clamp-1">{product.name}</h3>
+                                <p className="text-gray-500 text-sm mb-6 line-clamp-2 leading-relaxed flex-grow">{product.description}</p>
+                                
+                                <div className="flex items-center justify-between pt-5 border-t border-gray-50">
                                     <span className="text-2xl font-black text-gray-900 tracking-tight">₹{product.price}</span>
-                                    <div className="flex gap-2">
-                                        {product.isSubscriptionEligible && (
-                                            <button 
-                                                onClick={() => setSubscriptionProduct(product)}
-                                                className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl p-2.5 shadow-sm transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
-                                                title="Subscribe to this product"
-                                            >
-                                                <CalendarClock className="h-5 w-5" />
-                                            </button>
-                                        )}
-                                        <button 
-                                            onClick={() => addToCart(product)}
-                                            className="bg-primary-600 hover:bg-primary-700 text-white rounded-xl p-2.5 shadow-md shadow-primary-500/30 transition-all duration-200 hover:scale-105 active:scale-95 flex items-center gap-2"
-                                        >
-                                            <ShoppingCart className="h-5 w-5" />
-                                        </button>
-                                    </div>
+                                    <button 
+                                        onClick={() => addToCart(product)}
+                                        className="bg-gray-900 hover:bg-primary-600 text-white rounded-2xl px-5 py-3 shadow-lg shadow-gray-200 transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-2 group/btn"
+                                    >
+                                        <span className="text-sm font-bold">Add to Cart</span>
+                                        <ShoppingCart className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     ))}
-                    {filteredProducts.length === 0 && (
-                        <div className="col-span-full text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100">
-                             <ShoppingCart className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-                             <p className="text-gray-500 font-medium text-lg">No grocery items found matching your filters.</p>
-                             <button onClick={() => {setSearchTerm(''); setCategoryFilter('All');}} className="mt-4 text-primary-600 font-bold hover:underline">Clear all filters</button>
-                        </div>
-                    )}
                 </div>
             )}
             
-            {subscriptionProduct && (
-                <SubscriptionModal 
-                    products={Array.isArray(subscriptionProduct) ? subscriptionProduct : [subscriptionProduct]} 
-                    onClose={() => {
-                        setSubscriptionProduct(null);
-                        setSelectedProducts([]);
-                    }} 
-                />
-            )}
-
-            {selectedProducts.length > 0 && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 bg-white/90 backdrop-blur-md px-6 py-4 rounded-3xl shadow-2xl border border-primary-100 flex items-center gap-6 animate-in slide-in-from-bottom-8 duration-300">
-                    <p className="text-gray-900 font-bold whitespace-nowrap">
-                        <span className="bg-primary-600 text-white w-7 h-7 inline-flex items-center justify-center rounded-full mr-2">{selectedProducts.length}</span>
-                        Items Selected
-                    </p>
-                    <div className="flex gap-3">
-                        <button 
-                            onClick={() => setSelectedProducts([])}
-                            className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors"
-                        >
-                            Clear
-                        </button>
-                        <button 
-                            onClick={() => setSubscriptionProduct(selectedProducts)}
-                            className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-primary-500/30 transition-all flex items-center gap-2"
-                        >
-                            <CalendarClock className="h-4 w-4" />
-                            Subscribe Bulk
-                        </button>
+            {filteredProducts.length === 0 && !loading && (
+                <div className="text-center py-24 bg-gray-50 rounded-[3rem] border-2 border-dashed border-gray-200">
+                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                        <Search className="h-8 w-8 text-gray-300" />
                     </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">No items found</h3>
+                    <p className="text-gray-500 mb-6">Try adjusting your search or filters.</p>
+                    <button onClick={() => {setSearchTerm(''); setCategoryFilter('All');}} className="text-primary-600 font-bold hover:underline">Reset all filters</button>
                 </div>
             )}
         </div>

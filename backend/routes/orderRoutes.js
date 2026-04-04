@@ -7,7 +7,8 @@ import {
   getMyOrders,
   getOrders,
   assignOrderToStaff,
-  cancelOrder
+  cancelOrder,
+  deleteOrder
 } from '../controllers/orderController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -19,7 +20,9 @@ router.route('/')
 
 router.route('/myorders').get(protect, getMyOrders);
 
-router.route('/:id').get(protect, getOrderById);
+router.route('/:id')
+  .get(protect, getOrderById)
+  .delete(protect, authorize('Admin', 'Manager'), deleteOrder);
 
 router.route('/:id/pay').put(protect, updateOrderToPaid);
 
