@@ -25,6 +25,9 @@ export const addOrderItems = async (req, res, next) => {
       taxPrice,
       shippingPrice,
       totalPrice,
+      customerId, // For POS
+      isPaid, // For POS
+      isDelivered, // For POS
     } = req.body;
 
     if (orderItems && orderItems.length === 0) {
@@ -34,9 +37,15 @@ export const addOrderItems = async (req, res, next) => {
       // Deduct stock
       await updateStock(orderItems, false);
 
-      const order = new Order({
+      // Determine customer
+      let finalCustomer = req.user._id;
+      if (customerId && (req.user.role === 'Admin' || req.user.role === 'Manager')) {
+        finalCustomer = customerId;
+      }
+
+      const orderData = {
         orderItems,
-        customer: req.user._id, // User creating the order
+        customer: finalCustomer,
         shippingAddress,
         paymentMethod,
         orderType,
@@ -44,7 +53,20 @@ export const addOrderItems = async (req, res, next) => {
         taxPrice,
         shippingPrice,
         totalPrice,
-      });
+      };
+
+      if (isPaid) {
+        orderData.isPaid = true;
+        orderData.paidAt = Date.now();
+      }
+
+      if (isDelivered) {
+        orderData.isDelivered = true;
+        orderData.deliveredAt = Date.now();
+        orderData.status = 'Delivered';
+      }
+
+      const order = new Order(orderData);
 
       const createdOrder = await order.save();
       res.status(201).json(createdOrder);
