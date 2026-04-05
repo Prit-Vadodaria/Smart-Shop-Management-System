@@ -52,7 +52,7 @@ const Navbar = () => {
           <div className="flex">
             <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => navigate('/')}>
               <ShoppingBag className="h-8 w-8 text-primary-600" />
-              <span className="ml-2 font-bold text-xl text-gray-900 tracking-tight">ShopManage</span>
+              <span className="ml-2 font-bold text-xl text-gray-900 tracking-tight">{import.meta.env.VITE_SHOP_NAME || 'Smart Shop'}</span>
             </div>
 
             {user && (
