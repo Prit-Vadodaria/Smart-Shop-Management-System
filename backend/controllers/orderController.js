@@ -25,52 +25,58 @@ export const addOrderItems = async (req, res, next) => {
       taxPrice,
       shippingPrice,
       totalPrice,
-      customerId, // For POS
-      isPaid, // For POS
-      isDelivered, // For POS
+      customerId,
+      customerName, 
+      isPaid,
+      isDelivered,
     } = req.body;
 
     if (orderItems && orderItems.length === 0) {
-      res.status(400);
-      throw new Error('No order items');
-    } else {
-      // Deduct stock
-      await updateStock(orderItems, false);
-
-      // Determine customer
-      let finalCustomer = req.user._id;
-      if (customerId && (req.user.role === 'Admin' || req.user.role === 'Manager')) {
-        finalCustomer = customerId;
-      }
-
-      const orderData = {
-        orderItems,
-        customer: finalCustomer,
-        shippingAddress,
-        paymentMethod,
-        orderType,
-        itemsPrice,
-        taxPrice,
-        shippingPrice,
-        totalPrice,
-      };
-
-      if (isPaid) {
-        orderData.isPaid = true;
-        orderData.paidAt = Date.now();
-      }
-
-      if (isDelivered) {
-        orderData.isDelivered = true;
-        orderData.deliveredAt = Date.now();
-        orderData.status = 'Delivered';
-      }
-
-      const order = new Order(orderData);
-
-      const createdOrder = await order.save();
-      res.status(201).json(createdOrder);
+      return res.status(400).json({ success: false, message: 'No order items' });
     }
+
+    // Determine the customer
+    let finalCustomer = req.user._id;
+    let finalCustomerName = null;
+
+    if (req.user.role === 'Admin' || req.user.role === 'Manager') {
+      if (customerId) {
+        finalCustomer = customerId;
+      } else if (customerName) {
+        finalCustomer = null; 
+        finalCustomerName = customerName;
+      }
+    }
+
+    // Deduct stock
+    await updateStock(orderItems, false);
+
+    const order = new Order({
+      orderItems,
+      customer: finalCustomer,
+      customerName: finalCustomerName,
+      shippingAddress,
+      paymentMethod,
+      orderType,
+      itemsPrice,
+      taxPrice,
+      shippingPrice,
+      totalPrice,
+    });
+
+    if (isPaid) {
+      order.isPaid = true;
+      order.paidAt = Date.now();
+    }
+
+    if (isDelivered) {
+      order.isDelivered = true;
+      order.deliveredAt = Date.now();
+      order.status = 'Delivered';
+    }
+
+    const createdOrder = await order.save();
+    res.status(201).json(createdOrder);
   } catch (error) {
     next(error);
   }

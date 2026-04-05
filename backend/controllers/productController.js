@@ -7,7 +7,16 @@ import Subscription from '../models/Subscription.js';
 // @access  Public
 export const getProducts = async (req, res, next) => {
   try {
-    const products = await Product.find({});
+    const keyword = req.query.keyword
+      ? {
+          name: {
+            $regex: req.query.keyword,
+            $options: 'i',
+          },
+        }
+      : {};
+
+    const products = await Product.find({ ...keyword });
     res.json({ success: true, count: products.length, data: products });
   } catch (error) {
     next(error);

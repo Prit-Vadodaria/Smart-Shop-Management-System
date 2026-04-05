@@ -81,8 +81,25 @@ export const addAddress = async (req, res, next) => {
 // @access  Private/Admin/Manager
 export const getCustomers = async (req, res, next) => {
   try {
-    const customers = await CustomerProfile.find({}).populate('user', 'name email');
-    res.json(customers);
+    // Fetch all users with role 'Customer'
+    const customers = await User.find({ role: 'Customer' }).select('name email role');
+    
+    // For each customer, try to find their profile
+    const results = await Promise.all(customers.map(async (user) => {
+      const profile = await CustomerProfile.findOne({ user: user._id });
+      return {
+        _id: profile ? profile._id : `TEMP_${user._id}`,
+        user: {
+            _id: user._id, // User ID is crucial for order creation
+            name: user.name,
+            email: user.email
+        },
+        phone: profile ? profile.phone : 'N/A',
+        customerId: profile ? profile.customerId : 'N/A'
+      };
+    }));
+
+    res.json(results);
   } catch (error) {
     next(error);
   }

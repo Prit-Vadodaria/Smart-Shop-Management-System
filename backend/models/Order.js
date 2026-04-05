@@ -4,7 +4,11 @@ const OrderSchema = new mongoose.Schema({
   customer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false
+  },
+  customerName: {
+    type: String,
+    required: false
   },
   orderItems: [
     {
@@ -20,10 +24,10 @@ const OrderSchema = new mongoose.Schema({
     }
   ],
   shippingAddress: {
-    address: { type: String, required: true },
-    city: { type: String, required: true },
-    postalCode: { type: String, required: true },
-    country: { type: String, required: true }
+    address: { type: String, required: false },
+    city: { type: String, required: false },
+    postalCode: { type: String, required: false },
+    country: { type: String, required: false }
   },
   orderType: {
     type: String,

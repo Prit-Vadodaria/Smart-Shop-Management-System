@@ -117,3 +117,40 @@ export const getStaff = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Register a new customer briefly (Admin/Manager)
+// @route   POST /api/auth/quick-customer
+// @access  Private/Admin/Manager
+export const registerQuickCustomer = async (req, res, next) => {
+  try {
+    const { name, email, phone } = req.body;
+
+    // Use name as base for email if not provided
+    const finalEmail = email || `${name.toLowerCase().replace(/\s+/g, '')}${Date.now()}@temp.com`;
+    const password = `${name.toLowerCase().replace(/\s+/g, '')}1234`;
+
+    const userExists = await User.findOne({ email: finalEmail });
+    if (userExists) {
+        return res.status(400).json({ success: false, message: 'Customer already exists' });
+    }
+
+    const user = await User.create({
+      name,
+      email: finalEmail,
+      password,
+      role: 'Customer'
+    });
+
+    res.status(201).json({
+      success: true,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

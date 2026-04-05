@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { Package, Truck, Store, MapPin, CheckCircle, Clock, Search, Filter, Trash2, Plus, ShoppingCart, User as UserIcon, X, CreditCard, Wallet } from 'lucide-react';
+import { Package, Truck, Store, MapPin, CheckCircle, Clock, Search, Filter, Trash2, Plus, ShoppingCart, User as UserIcon, X, CreditCard } from 'lucide-react';
 import api from '../services/api';
 
 const StoreOrders = () => {
@@ -9,7 +9,7 @@ const StoreOrders = () => {
     const [staffList, setStaffList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('active'); // active, completed, cancelled
-    
+
     // POS State
     const [isPOSOpen, setIsPOSOpen] = useState(false);
     const [posCustomer, setPosCustomer] = useState(null);
@@ -19,9 +19,12 @@ const StoreOrders = () => {
     const [productResults, setProductResults] = useState([]);
     const [customerResults, setCustomerResults] = useState([]);
     const [paymentMode, setPaymentMode] = useState('Offline');
-    const [isPaid, setIsPaid] = useState(true);
-    const [isDelivered, setIsDelivered] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSearchingProducts, setIsSearchingProducts] = useState(false);
+    const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+    const [isInitialPosLoading, setIsInitialPosLoading] = useState(false);
+    const [allProducts, setAllProducts] = useState([]);
+    const [allCustomers, setAllCustomers] = useState([]);
 
     const isManagement = user.role === 'Admin' || user.role === 'Manager';
 
@@ -37,7 +40,7 @@ const StoreOrders = () => {
                     const { data: staffData } = await api.get('/auth/staff');
                     setStaffList(staffData.data);
                 }
-                
+
                 setIsLoading(false);
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -48,44 +51,58 @@ const StoreOrders = () => {
         fetchInitialData();
     }, [isManagement]);
 
-    // Search Products
+    // Fetch All Products and Customers when POS Opens
     useEffect(() => {
-        if (productSearch.length < 2) {
-            setProductResults([]);
+        if (!isPOSOpen) return;
+
+        const fetchPosData = async () => {
+            setIsInitialPosLoading(true);
+            try {
+                const [prodRes, custRes] = await Promise.all([
+                    api.get('/products'),
+                    api.get('/customers')
+                ]);
+                // Product API returns { data: [...] }
+                setAllProducts(prodRes.data.data || []);
+                setProductResults(prodRes.data.data || []);
+                // Customer API returns [...]
+                setAllCustomers(custRes.data || []);
+            } catch (error) {
+                console.error('Error fetching POS data:', error);
+            } finally {
+                setIsInitialPosLoading(false);
+            }
+        };
+
+        fetchPosData();
+    }, [isPOSOpen]);
+
+    // Client-side Product Filtering
+    useEffect(() => {
+        if (!productSearch) {
+            setProductResults(allProducts);
             return;
         }
-        const delayDebounceFn = setTimeout(async () => {
-            try {
-                const { data } = await api.get(`/products?keyword=${productSearch}`);
-                setProductResults(data.products || []);
-            } catch (error) {
-                console.error('Error searching products:', error);
-            }
-        }, 300);
-        return () => clearTimeout(delayDebounceFn);
-    }, [productSearch]);
+        const filtered = allProducts.filter(p =>
+            p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+            p.category.toLowerCase().includes(productSearch.toLowerCase())
+        );
+        setProductResults(filtered);
+    }, [productSearch, allProducts]);
 
-    // Search Customers
+    // Client-side Customer Filtering
     useEffect(() => {
-        if (customerSearch.length < 2) {
+        if (!customerSearch) {
             setCustomerResults([]);
             return;
         }
-        const delayDebounceFn = setTimeout(async () => {
-            try {
-                const { data } = await api.get(`/customers`);
-                // Simple client-side filter for now as backend might not have search param
-                const filtered = data.filter(c => 
-                    c.user.name.toLowerCase().includes(customerSearch.toLowerCase()) || 
-                    c.user.email.toLowerCase().includes(customerSearch.toLowerCase())
-                );
-                setCustomerResults(filtered);
-            } catch (error) {
-                console.error('Error searching customers:', error);
-            }
-        }, 300);
-        return () => clearTimeout(delayDebounceFn);
-    }, [customerSearch]);
+        const filtered = allCustomers.filter(c =>
+            c.user?.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+            c.user?.email?.toLowerCase().includes(customerSearch.toLowerCase())
+        );
+        setCustomerResults(filtered);
+    }, [customerSearch, allCustomers]);
+
 
     const addToCart = (product) => {
         const exists = posCart.find(item => item.product === product._id);
@@ -101,7 +118,6 @@ const StoreOrders = () => {
             }]);
         }
         setProductSearch('');
-        setProductResults([]);
     };
 
     const removeFromCart = (productId) => {
@@ -125,26 +141,42 @@ const StoreOrders = () => {
 
             const orderData = {
                 orderItems: posCart,
-                customerId: posCustomer.user._id,
+                customerId: posCustomer.isGuest ? null : (posCustomer.user?._id || posCustomer._id),
+                customerName: posCustomer.isGuest ? posCustomer.user.name : null,
                 paymentMethod: paymentMode,
                 orderType: 'Takeaway',
                 itemsPrice,
                 taxPrice,
                 shippingPrice: 0,
                 totalPrice,
-                isPaid,
-                isDelivered
+                isPaid: true,
+                isDelivered: true,
+                shippingAddress: { // Added for validation compatibility
+                    address: 'In-Store',
+                    city: 'Store Location',
+                    postalCode: '000000',
+                    country: 'India'
+                }
             };
 
             const { data } = await api.post('/orders', orderData);
-            setOrders([data, ...orders]);
-            
+
+            // Add the new order to the list immediately
+            setOrders(prevOrders => [data, ...prevOrders]);
+
+            // Show a professional receipt-style success message
+            const orderId = data._id.toString().substring(data._id.toString().length - 8).toUpperCase();
+            const customerNameDisplay = posCustomer.isGuest ? posCustomer.user.name : (posCustomer.user?.name || posCustomer.name);
+            alert(`✅ Sale Completed Successfully!\nOrder ID: ORD-${orderId}\nCustomer: ${customerNameDisplay}\nTotal: ₹${totalPrice.toFixed(2)}`);
+
             // Reset POS
             setIsPOSOpen(false);
             setPosCart([]);
             setPosCustomer(null);
             setPaymentMode('Offline');
-            alert('POS Sale completed successfully!');
+
+            // Switch to the relevant tab to show the new record
+            setActiveTab('completed');
         } catch (error) {
             console.error('Error completing POS sale:', error);
             alert(error.response?.data?.message || 'Failed to complete checkout');
@@ -217,7 +249,7 @@ const StoreOrders = () => {
                         Total: {orders.length}
                     </span>
                     {isManagement && (
-                        <button 
+                        <button
                             onClick={() => setIsPOSOpen(true)}
                             className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-primary-200 transition-all active:scale-95"
                         >
@@ -230,19 +262,19 @@ const StoreOrders = () => {
 
             {/* Tab Navigation */}
             <div className="flex gap-4 mb-8 bg-gray-100/50 p-1 rounded-2xl w-max">
-                <button 
+                <button
                     onClick={() => setActiveTab('active')}
                     className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'active' ? 'bg-white text-primary-600 shadow-sm border border-gray-100' : 'text-gray-500 hover:text-gray-700'}`}
                 >
                     Active ({activeOrders.length})
                 </button>
-                <button 
+                <button
                     onClick={() => setActiveTab('completed')}
                     className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'completed' ? 'bg-white text-green-600 shadow-sm border border-gray-100' : 'text-gray-500 hover:text-gray-700'}`}
                 >
                     Completed ({completedOrders.length})
                 </button>
-                <button 
+                <button
                     onClick={() => setActiveTab('cancelled')}
                     className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'cancelled' ? 'bg-white text-red-600 shadow-sm border border-gray-100' : 'text-gray-500 hover:text-gray-700'}`}
                 >
@@ -281,11 +313,11 @@ const StoreOrders = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-6">
-                                        
+
                                         {/* Status Changer */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs font-bold text-gray-500 uppercase">Status:</span>
-                                            <select 
+                                            <select
                                                 value={order.status}
                                                 onChange={(e) => handleStatusChange(order._id, e.target.value)}
                                                 disabled={!canEditStatus}
@@ -321,7 +353,7 @@ const StoreOrders = () => {
                                         </div>
 
                                         {isManagement && (
-                                            <button 
+                                            <button
                                                 onClick={() => deleteOrder(order._id)}
                                                 className="p-2 text-gray-300 hover:text-red-500 transition-colors"
                                                 title="Permanently Delete Order"
@@ -337,8 +369,16 @@ const StoreOrders = () => {
                                     <div>
                                         <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Customer & Shipping</h4>
                                         <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                                            <p className="font-bold text-gray-800">{order.customer?.name || 'Unknown'}</p>
-                                            <p className="text-sm text-gray-500 mb-3">{order.paymentMethod} • ₹{order.totalPrice.toFixed(2)}</p>
+                                            <div className="flex items-center gap-3 mt-1 mb-2">
+                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-lg ${order.isPaid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {order.isPaid ? 'PAID' : 'UNPAID'}
+                                                </span>
+                                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-lg bg-gray-100 text-gray-600">
+                                                    {order.paymentMethod} Mode
+                                                </span>
+                                            </div>
+                                            <p className="font-bold text-gray-800">{order.customer?.name || order.customerName || 'Walk-in Customer'}</p>
+                                            <p className="text-sm text-gray-500 mb-2">Total: ₹{order.totalPrice.toFixed(2)}</p>
                                             
                                             {order.orderType === 'Home Delivery' && order.shippingAddress && (
                                                 <div className="text-sm text-gray-600 flex gap-2">
@@ -348,7 +388,7 @@ const StoreOrders = () => {
                                             )}
                                         </div>
                                     </div>
-                                    
+
                                     <div>
                                         <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Items ({order.orderItems.length})</h4>
                                         <div className="max-h-32 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
@@ -374,7 +414,7 @@ const StoreOrders = () => {
             {isPOSOpen && (
                 <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-                        
+
                         {/* Header */}
                         <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-primary-50/30">
                             <div>
@@ -384,7 +424,7 @@ const StoreOrders = () => {
                                 </h2>
                                 <p className="text-sm text-gray-500 font-medium">Create a new sale for a customer</p>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setIsPOSOpen(false)}
                                 className="p-2 hover:bg-white rounded-xl text-gray-400 hover:text-red-500 transition-all shadow-sm border border-transparent hover:border-red-100"
                             >
@@ -393,28 +433,35 @@ const StoreOrders = () => {
                         </div>
 
                         <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-                            
+
                             {/* Left Side: Search & Selection */}
                             <div className="flex-1 overflow-y-auto p-8 border-r border-gray-100 custom-scrollbar">
-                                
+
                                 {/* Customer Selection */}
                                 <div className="mb-8">
                                     <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 block">1. Select Customer</label>
-                                    
+
                                     {!posCustomer ? (
                                         <div className="relative">
                                             <div className="relative group">
-                                                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
-                                                <input 
+                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white rounded-xl shadow-sm border border-gray-100 group-focus-within:border-primary-200 transition-all">
+                                                    <UserIcon className="h-4 w-4 text-gray-400 group-focus-within:text-primary-600" />
+                                                </div>
+                                                <input
                                                     type="text"
                                                     value={customerSearch}
                                                     onChange={(e) => setCustomerSearch(e.target.value)}
                                                     placeholder="Search by name or email..."
-                                                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none transition-all font-medium text-gray-700"
+                                                    className="w-full pl-16 pr-4 py-4 bg-gray-50 border-2 border-transparent focus:border-primary-500 focus:bg-white rounded-2xl outline-none transition-all font-medium text-gray-700 shadow-inner"
                                                 />
                                             </div>
-                                            
-                                            {customerResults.length > 0 && (
+
+                                            {isInitialPosLoading || isSearchingCustomers ? (
+                                                <div className="p-8 text-center bg-white rounded-2xl shadow-xl border border-gray-100 flex flex-col items-center gap-3">
+                                                    <div className="h-6 w-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                                                    <p className="text-xs font-bold text-gray-500">Retrieving customers...</p>
+                                                </div>
+                                            ) : customerResults.length > 0 ? (
                                                 <div className="absolute z-10 w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
                                                     {customerResults.map(cust => (
                                                         <button
@@ -423,31 +470,55 @@ const StoreOrders = () => {
                                                             className="w-full px-6 py-4 text-left hover:bg-primary-50 transition-colors border-b border-gray-50 flex items-center justify-between group"
                                                         >
                                                             <div>
-                                                                <p className="font-bold text-gray-800">{cust.user.name}</p>
-                                                                <p className="text-xs text-gray-500">{cust.user.email}</p>
+                                                                <p className="font-bold text-gray-800">{cust.user?.name || 'No Name'}</p>
+                                                                <p className="text-xs text-gray-500">{cust.user?.email || 'No Email'}</p>
                                                             </div>
                                                             <Plus className="h-5 w-5 text-gray-300 group-hover:text-primary-600 transition-colors" />
                                                         </button>
                                                     ))}
+                                                    <button
+                                                        onClick={() => { setPosCustomer({ isGuest: true, user: { name: customerSearch } }); setCustomerSearch(''); setCustomerResults([]); }}
+                                                        className="w-full px-6 py-4 text-left bg-primary-50 hover:bg-primary-100 text-primary-700 font-bold text-sm flex items-center gap-3 transition-colors"
+                                                    >
+                                                        <Plus className="h-4 w-4" /> Use "{customerSearch}" as Guest Name
+                                                    </button>
                                                 </div>
-                                            )}
+                                            ) : customerSearch.length >= 1 ? (
+                                                <div className="absolute z-10 w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                                                    <div className="p-6 text-center text-gray-400 text-sm font-bold">
+                                                        No customers found by that name.
+                                                    </div>
+                                                    <button
+                                                        onClick={() => { setPosCustomer({ isGuest: true, user: { name: customerSearch } }); setCustomerSearch(''); setCustomerResults([]); }}
+                                                        className="w-full px-6 py-4 text-left bg-primary-50 hover:bg-primary-100 text-primary-700 font-bold text-sm flex items-center gap-3 transition-colors border-t border-gray-100"
+                                                    >
+                                                        <Plus className="h-4 w-4" /> Record as Guest: "{customerSearch}"
+                                                    </button>
+                                                </div>
+                                            ) : null}
                                         </div>
                                     ) : (
                                         <div className="bg-primary-50 border-2 border-primary-100 rounded-2xl p-6 flex items-center justify-between shadow-sm">
                                             <div className="flex items-center gap-5">
                                                 <div className="h-14 w-14 bg-primary-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold">
-                                                    {posCustomer.user.name.charAt(0)}
+                                                    {(posCustomer.user?.name || '?').charAt(0)}
                                                 </div>
                                                 <div>
-                                                    <p className="font-black text-gray-900 text-lg leading-tight">{posCustomer.user.name}</p>
-                                                    <p className="text-primary-600 font-bold text-sm">{posCustomer.user.email}</p>
-                                                    <div className="flex gap-4 mt-1">
-                                                        <span className="text-[10px] font-black text-primary-400 uppercase tracking-tighter">Phone: {posCustomer.phone || 'N/A'}</span>
-                                                        <span className="text-[10px] font-black text-primary-400 uppercase tracking-tighter">ID: {posCustomer.customerId}</span>
-                                                    </div>
+                                                    <p className="font-black text-gray-900 text-lg leading-tight">{posCustomer.user?.name || 'Walk-in'}</p>
+                                                    {posCustomer.isGuest ? (
+                                                        <p className="text-primary-600 font-bold text-xs uppercase tracking-widest mt-1">Guest Customer</p>
+                                                    ) : (
+                                                        <>
+                                                            <p className="text-primary-600 font-bold text-sm">{posCustomer.user?.email || 'No Email'}</p>
+                                                            <div className="flex gap-4 mt-1">
+                                                                <span className="text-[10px] font-black text-primary-400 uppercase tracking-tighter">Phone: {posCustomer.phone || 'N/A'}</span>
+                                                                <span className="text-[10px] font-black text-primary-400 uppercase tracking-tighter">ID: {posCustomer.customerId || 'N/A'}</span>
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <button 
+                                            <button
                                                 onClick={() => setPosCustomer(null)}
                                                 className="text-xs font-black text-primary-600 hover:text-red-600 uppercase tracking-widest px-4 py-2 hover:bg-white rounded-xl transition-all"
                                             >
@@ -460,78 +531,68 @@ const StoreOrders = () => {
                                 {/* Product Selection */}
                                 <div>
                                     <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 block">2. Add Products</label>
-                                    <div className="relative mb-6">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                        <input 
-                                            type="text"
-                                            value={productSearch}
-                                            onChange={(e) => setProductSearch(e.target.value)}
-                                            placeholder="Search products by name..."
-                                            className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-transparent focus:border-primary-500 rounded-2xl outline-none transition-all font-medium text-gray-700"
-                                        />
-                                        
-                                        {productResults.length > 0 && (
-                                            <div className="absolute z-10 w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden max-h-64 overflow-y-auto custom-scrollbar">
+                                    <div className="mb-8">
+                                        <div className="relative group mb-6">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white rounded-xl shadow-sm border border-gray-100 group-focus-within:border-primary-200 transition-all">
+                                                <Search className="h-4 w-4 text-gray-400 group-focus-within:text-primary-600" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={productSearch}
+                                                onChange={(e) => setProductSearch(e.target.value)}
+                                                placeholder="Search products by name..."
+                                                className="w-full pl-16 pr-4 py-4 bg-gray-50 border-2 border-transparent focus:border-primary-500 focus:bg-white rounded-2xl outline-none transition-all font-medium text-gray-700 shadow-inner"
+                                            />
+                                        </div>
+
+                                        {isInitialPosLoading || isSearchingProducts ? (
+                                            <div className="p-12 text-center bg-white rounded-3xl border border-gray-100 flex flex-col items-center gap-4">
+                                                <div className="h-8 w-8 border-3 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                                                <p className="text-sm font-bold text-gray-400">Loading products...</p>
+                                            </div>
+                                        ) : productResults.length > 0 ? (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                                 {productResults.map(prod => (
                                                     <button
                                                         key={prod._id}
                                                         onClick={() => addToCart(prod)}
                                                         disabled={prod.countInStock === 0}
-                                                        className="w-full px-6 py-4 text-left hover:bg-primary-50 transition-colors border-b border-gray-50 flex items-center justify-between disabled:opacity-50 group"
+                                                        className="text-left bg-white p-4 rounded-2xl border border-gray-100 hover:border-primary-200 hover:shadow-md transition-all flex items-center gap-4 disabled:opacity-50 group hover:translate-y-[-2px]"
                                                     >
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="h-10 w-10 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                                                                <img src={prod.image} alt="" className="w-full h-full object-cover" />
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-bold text-gray-800">{prod.name}</p>
-                                                                <p className="text-xs text-gray-500">₹{prod.price} • {prod.countInStock} in stock</p>
+                                                        <div className="h-14 w-14 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0">
+                                                            <img src={prod.image || '/no-photo.jpg'} alt="" className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-bold text-gray-800 text-sm truncate">{prod.name}</p>
+                                                            <div className="flex items-center justify-between mt-1">
+                                                                <span className="text-primary-600 font-black text-sm">₹{prod.price}</span>
+                                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-lg ${prod.countInStock > 10 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                                                    {prod.countInStock} Left
+                                                                </span>
                                                             </div>
                                                         </div>
-                                                        <Plus className="h-5 w-5 text-gray-300 group-hover:text-primary-600 transition-colors" />
+                                                        <Plus className="h-5 w-5 text-primary-200 group-hover:text-primary-600 transition-colors" />
                                                     </button>
                                                 ))}
                                             </div>
+                                        ) : (
+                                            <div className="p-12 text-center bg-white rounded-3xl border-2 border-dashed border-gray-200 text-gray-400 text-sm font-bold">
+                                                No products available.
+                                            </div>
                                         )}
                                     </div>
-
-                                    {/* Quick Summary of Selected Customer's History */}
-                                    {posCustomer && (
-                                        <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                                            <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Customer History</h4>
-                                            <div className="space-y-4">
-                                                {orders.filter(o => o.customer?._id === posCustomer.user._id).slice(0, 3).map(order => (
-                                                    <div key={order._id} className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-gray-100 shadow-sm">
-                                                        <div>
-                                                            <p className="text-xs font-bold text-gray-800">ORD-{order._id.substring(order._id.length-6).toUpperCase()}</p>
-                                                            <p className="text-[10px] text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</p>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className="text-xs font-black text-gray-900">₹{order.totalPrice.toFixed(2)}</p>
-                                                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${order.status === 'Delivered' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                                                                {order.status}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                {orders.filter(o => o.customer?._id === posCustomer.user._id).length === 0 && (
-                                                    <p className="text-xs text-center text-gray-400 py-2">No previous orders found.</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
-                            
+
                             {/* Right Side: Cart & Checkout */}
                             <div className="w-full lg:w-96 bg-gray-50 overflow-y-auto p-8 border-t lg:border-t-0 border-gray-100 custom-scrollbar flex flex-col">
                                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 block">3. Order Summary</label>
-                                
+
                                 <div className="flex-1 space-y-4 mb-8">
                                     {posCart.length === 0 ? (
                                         <div className="h-48 flex flex-col items-center justify-center text-center p-6 bg-white rounded-3xl border-2 border-dashed border-gray-200">
                                             <ShoppingCart className="h-10 w-10 text-gray-300 mb-3" />
-                                            <p className="text-sm font-bold text-gray-400 leading-tight">Your cart is empty.<br/>Add products to start.</p>
+                                            <p className="text-sm font-bold text-gray-400 leading-tight">Your cart is empty.<br />Add products to start.</p>
                                         </div>
                                     ) : (
                                         posCart.map(item => (
@@ -541,17 +602,17 @@ const StoreOrders = () => {
                                                     <p className="text-xs text-primary-600 font-bold">₹{item.price}</p>
                                                 </div>
                                                 <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-1 border border-gray-100">
-                                                    <button 
+                                                    <button
                                                         onClick={() => updateCartQty(item.product, item.quantity - 1)}
                                                         className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-500 hover:text-primary-600 transition-all font-bold"
                                                     >-</button>
                                                     <span className="text-sm font-black text-gray-900 w-4 text-center">{item.quantity}</span>
-                                                    <button 
+                                                    <button
                                                         onClick={() => updateCartQty(item.product, item.quantity + 1)}
                                                         className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-white text-gray-500 hover:text-primary-600 transition-all font-bold"
                                                     >+</button>
                                                 </div>
-                                                <button 
+                                                <button
                                                     onClick={() => removeFromCart(item.product)}
                                                     className="p-2 text-gray-300 hover:text-red-500 transition-colors"
                                                 >
@@ -569,34 +630,17 @@ const StoreOrders = () => {
                                             <CreditCard className="h-4 w-4" /> Payment Mode
                                         </span>
                                         <div className="flex bg-white rounded-xl p-1 border border-gray-200 shadow-sm">
-                                            <button 
-                                                onClick={() => setPaymentMode('Offline')}
-                                                className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${paymentMode === 'Offline' ? 'bg-primary-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
-                                            >Offline</button>
-                                            <button 
-                                                onClick={() => setPaymentMode('Online')}
-                                                className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${paymentMode === 'Online' ? 'bg-primary-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
-                                            >Online</button>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center justify-between cursor-pointer group" onClick={() => setIsPaid(!isPaid)}>
-                                        <span className="text-sm font-bold text-gray-600 flex items-center gap-2">
-                                            <Wallet className="h-4 w-4" /> Mark as Paid
-                                        </span>
-                                        <div className={`w-12 h-6 rounded-full transition-all relative ${isPaid ? 'bg-primary-600' : 'bg-gray-300'}`}>
-                                            <div className={`absolute top-1 h-4 w-4 bg-white rounded-full transition-all ${isPaid ? 'left-7' : 'left-1'}`}></div>
+                                            <button
+                                                onClick={() => setPaymentMode('Cash')}
+                                                className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${paymentMode === 'Cash' ? 'bg-primary-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+                                            >Cash</button>
+                                            <button
+                                                onClick={() => setPaymentMode('UPI')}
+                                                className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${paymentMode === 'UPI' ? 'bg-primary-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+                                            >UPI</button>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between cursor-pointer group" onClick={() => setIsDelivered(!isDelivered)}>
-                                        <span className="text-sm font-bold text-gray-600 flex items-center gap-2">
-                                            <Truck className="h-4 w-4" /> Already Delivered
-                                        </span>
-                                        <div className={`w-12 h-6 rounded-full transition-all relative ${isDelivered ? 'bg-primary-600' : 'bg-gray-300'}`}>
-                                            <div className={`absolute top-1 h-4 w-4 bg-white rounded-full transition-all ${isDelivered ? 'left-7' : 'left-1'}`}></div>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 {/* Totals & Actions */}
@@ -615,7 +659,7 @@ const StoreOrders = () => {
                                             ₹{(posCart.reduce((acc, i) => acc + (i.price * i.quantity), 0) * 1.18).toFixed(2)}
                                         </span>
                                     </div>
-                                    <button 
+                                    <button
                                         disabled={isSubmitting || posCart.length === 0 || !posCustomer}
                                         onClick={handlePOSCheckout}
                                         className="w-full mt-4 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-200 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-primary-200 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
