@@ -73,6 +73,11 @@ export const addOrderItems = async (req, res, next) => {
       order.isDelivered = true;
       order.deliveredAt = Date.now();
       order.status = 'Delivered';
+      // If delivered at creation, mark as paid if not already
+      if (!order.isPaid) {
+        order.isPaid = true;
+        order.paidAt = Date.now();
+      }
     }
 
     const createdOrder = await order.save();
@@ -161,6 +166,11 @@ export const updateOrderStatus = async (req, res, next) => {
       if (status === 'Delivered' || status === 'Picked Up') {
         order.isDelivered = true;
         order.deliveredAt = Date.now();
+        // Automatically mark as paid upon delivery if not already paid
+        if (!order.isPaid) {
+          order.isPaid = true;
+          order.paidAt = Date.now();
+        }
       }
 
       const updatedOrder = await order.save();
