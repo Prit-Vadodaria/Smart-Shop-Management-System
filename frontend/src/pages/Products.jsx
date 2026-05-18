@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api from '../shared/services/api';
 import { Package, Plus, Search, Edit2, Trash2, X, Filter, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
 
 

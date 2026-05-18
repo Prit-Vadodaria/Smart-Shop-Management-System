@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api from '../shared/services/api';
 import { Calendar, Search, Filter, Truck, CheckCircle, ListChecks, Package } from 'lucide-react';
 
 const AdminSubscriptions = () => {
     const [subscriptions, setSubscriptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('Active');
+    const [statusFilter, _setStatusFilter] = useState('Active');
     const [generating, setGenerating] = useState(false);
     const [message, setMessage] = useState(null);
 

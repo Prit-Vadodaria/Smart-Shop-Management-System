@@ -1,0 +1,11 @@
+import express from 'express';
+import { getSettings, updateSettings } from '../controllers/settings.controller.js';
+import { protect, authorize } from '../../../middleware/authMiddleware.js';
+
+const router = express.Router();
+
+router.route('/')
+  .get(getSettings)
+  .put(protect, authorize('Admin', 'Manager'), updateSettings);
+
+export default router;

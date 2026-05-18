@@ -3,20 +3,26 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
 import connectDB from './config/db.js';
+import { validateEnv } from './utils/envValidator.js';
+import globalErrorHandler from './middleware/errorMiddleware.js';
+import { logger } from './utils/logger.js';
 
 // Route imports
-import authRoutes from './routes/authRoutes.js';
-import productRoutes from './routes/productRoutes.js';
-import orderRoutes from './routes/orderRoutes.js';
-import customerRoutes from './routes/customerRoutes.js';
-import subscriptionRoutes from './routes/subscriptionRoutes.js';
-import supplierRoutes from './routes/supplierRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js';
-import settingsRoutes from './routes/settingsRoutes.js';
-import notificationRoutes from './routes/notificationRoutes.js';
+import authRoutes from './modules/auth/routes/auth.routes.js';
+import productRoutes from './modules/products/routes/product.routes.js';
+import orderRoutes from './modules/billing/routes/billing.routes.js';
+import customerRoutes from './modules/customers/routes/customer.routes.js';
+import subscriptionRoutes from './modules/subscriptions/routes/subscription.routes.js';
+import supplierRoutes from './modules/suppliers/routes/supplier.routes.js';
+import paymentRoutes from './modules/billing/routes/payment.routes.js';
+import settingsRoutes from './modules/settings/routes/settings.routes.js';
+import notificationRoutes from './modules/notifications/routes/notification.routes.js';
 
 // Load env vars
 dotenv.config();
+
+// Validate env vars
+validateEnv();
 
 // Connect to database
 connectDB();
@@ -54,14 +60,8 @@ app.use((req, res, next) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.statusCode || 500).json({
-    success: false,
-    message: err.message || 'Server Error'
-  });
-});
+app.use(globalErrorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`));
+app.listen(PORT, () => logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`));

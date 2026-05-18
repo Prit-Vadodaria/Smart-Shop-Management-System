@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Calendar } from 'lucide-react';
-import api from '../services/api';
+import api from '../shared/services/api';
 
 const SubscriptionModal = ({ products = [], onClose }) => {
   // If products is just a single object, wrap it in array

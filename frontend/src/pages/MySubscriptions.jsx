@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api from '../shared/services/api';
 import { Calendar, Play, Pause, Trash2, Plus, Search, Info, CheckCircle, ChevronRight, Settings } from 'lucide-react';
 
 const MySubscriptions = () => {
@@ -112,6 +112,12 @@ const MySubscriptions = () => {
                     <p className="text-gray-500 mt-1">Configure your recurring delivery schedules.</p>
                 </div>
             </div>
+
+            {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-700 rounded-2xl font-bold text-sm">
+                    {error}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Left Sidebar: Settings & Tabs */}

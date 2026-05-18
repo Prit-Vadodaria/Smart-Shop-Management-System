@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { CreditCard, CheckCircle, Loader2, ShoppingBag } from 'lucide-react';
-import api from '../services/api';
+import api from '../shared/services/api';
 
 const Checkout = () => {
     const location = useLocation();
@@ -10,6 +10,7 @@ const Checkout = () => {
     const { clearCart } = useContext(CartContext);
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState(null);
+    const [paymentMethod, setPaymentMethod] = useState('Online');
 
     // If no state is passed, it means they accessed checkout directly without cart
     if (!location.state) {
@@ -23,8 +24,6 @@ const Checkout = () => {
     }
 
     const { orderType, cartItems, cartTotalPrice, totalTaxAmount, finalShippingFee, finalTotal } = location.state;
-
-    const [paymentMethod, setPaymentMethod] = useState('Online');
 
     const handleDone = async () => {
         setIsProcessing(true);

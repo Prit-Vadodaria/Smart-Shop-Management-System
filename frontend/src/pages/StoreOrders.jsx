@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../shared/context/AuthContext';
 import { Package, Truck, Store, MapPin, CheckCircle, Clock, Search, Filter, Trash2, Plus, ShoppingCart, User as UserIcon, X, CreditCard } from 'lucide-react';
-import api from '../services/api';
+import api from '../shared/services/api';
 
 const StoreOrders = () => {
     const { user } = useContext(AuthContext);
@@ -20,8 +20,8 @@ const StoreOrders = () => {
     const [customerResults, setCustomerResults] = useState([]);
     const [paymentMode, setPaymentMode] = useState('Offline');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSearchingProducts, setIsSearchingProducts] = useState(false);
-    const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+    const [isSearchingProducts, _setIsSearchingProducts] = useState(false);
+    const [isSearchingCustomers, _setIsSearchingCustomers] = useState(false);
     const [isInitialPosLoading, setIsInitialPosLoading] = useState(false);
     const [allProducts, setAllProducts] = useState([]);
     const [allCustomers, setAllCustomers] = useState([]);

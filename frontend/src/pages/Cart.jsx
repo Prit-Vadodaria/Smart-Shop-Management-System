@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag } from 'lucide-react';
-import api from '../services/api';
+import api from '../shared/services/api';
 
 const Cart = () => {
     const { cartItems, removeFromCart, updateQuantity, cartTotalPrice, cartTotalCount } = useContext(CartContext);

@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../shared/context/AuthContext';
 import { ShoppingBag, Users, Package, FileText, ArrowUpRight, TrendingUp, Settings as SettingsIcon, Save, AlertTriangle, RefreshCw, Clock, Truck } from 'lucide-react';
-import api from '../services/api';
+import api from '../shared/services/api';
 
 const StoreSettings = () => {
   const [settings, setSettings] = useState({ shippingPercentage: 5, freeShippingThreshold: 500 });
@@ -85,6 +85,7 @@ const StoreSettings = () => {
   );
 };
 
+/* eslint-disable-next-line no-unused-vars */
 const StatCard = ({ title, value, icon: Icon, trend }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between hover:shadow-md transition-shadow">
     <div>

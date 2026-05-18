@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api from '../shared/services/api';
 import { ShoppingCart, Search, Filter, ChevronDown, ArrowUpDown, CalendarClock, CheckCircle } from 'lucide-react';
 import { CartContext } from '../context/CartContext';
 
@@ -9,7 +9,7 @@ const Shop = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All');
-    const [sortOption, setSortOption] = useState('name-az');
+    const [sortOption, _setSortOption] = useState('name-az');
 
     useEffect(() => {
         const fetchProducts = async () => {

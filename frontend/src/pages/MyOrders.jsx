@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Truck, Store, Clock, CalendarDays, ExternalLink, ChevronRight, CheckCircle, MapPin } from 'lucide-react';
-import api from '../services/api';
+import api from '../shared/services/api';
 
 const MyOrders = () => {
     const [orders, setOrders] = useState([]);
@@ -20,7 +20,9 @@ const MyOrders = () => {
     };
 
     useEffect(() => {
-        fetchOrders();
+        setTimeout(() => {
+            fetchOrders();
+        }, 0);
     }, []);
 
     const handleCancel = async (orderId) => {
