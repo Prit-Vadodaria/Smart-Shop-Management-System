@@ -16,6 +16,7 @@ import MyOrders from './pages/MyOrders';
 import StoreOrders from './pages/StoreOrders';
 import MySubscriptions from './pages/MySubscriptions';
 import AdminSubscriptions from './pages/AdminSubscriptions';
+import Employees from './pages/Employees';
 
 function App() {
   return (
@@ -35,50 +36,56 @@ function App() {
             } />
 
             <Route path="/shop" element={
-              <ProtectedRoute roles={['Customer']}>
+              <ProtectedRoute roles={['customer']}>
                 <Shop />
               </ProtectedRoute>
             } />
 
             <Route path="/cart" element={
-              <ProtectedRoute roles={['Customer']}>
+              <ProtectedRoute roles={['customer']}>
                 <Cart />
               </ProtectedRoute>
             } />
 
             <Route path="/checkout" element={
-              <ProtectedRoute roles={['Customer']}>
+              <ProtectedRoute roles={['customer']}>
                 <Checkout />
               </ProtectedRoute>
             } />
 
             <Route path="/my-orders" element={
-              <ProtectedRoute roles={['Customer']}>
+              <ProtectedRoute roles={['customer']}>
                 <MyOrders />
               </ProtectedRoute>
             } />
 
             <Route path="/products" element={
-              <ProtectedRoute roles={['Admin', 'Manager', 'Staff']}>
+              <ProtectedRoute requireManager>
                 <Products />
               </ProtectedRoute>
             } />
 
             <Route path="/store-orders" element={
-              <ProtectedRoute roles={['Admin', 'Manager', 'Staff']}>
+              <ProtectedRoute roles={['admin', 'employee']}>
                 <StoreOrders />
               </ProtectedRoute>
             } />
 
             <Route path="/my-subscriptions" element={
-              <ProtectedRoute roles={['Customer']}>
+              <ProtectedRoute roles={['customer']}>
                 <MySubscriptions />
               </ProtectedRoute>
             } />
 
             <Route path="/subscriptions" element={
-              <ProtectedRoute roles={['Admin', 'Manager']}>
+              <ProtectedRoute roles={['admin']}>
                 <AdminSubscriptions />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/employees" element={
+              <ProtectedRoute roles={['admin']}>
+                <Employees />
               </ProtectedRoute>
             } />
 

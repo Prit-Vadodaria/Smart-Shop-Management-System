@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../shared/context/AuthContext';
+import { isManagerOrAdmin } from '../components/ProtectedRoute';
 import api from '../shared/services/api';
-import { Package, Plus, Search, Edit2, Trash2, X, Filter, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
+import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
+import { Package, Plus, Search, Edit2, Trash2, X, Filter, ArrowUp, ArrowDown, ChevronDown, Upload } from 'lucide-react';
 
 
 const defaultFormData = {
@@ -12,12 +15,13 @@ const defaultFormData = {
     taxPercentage: 0,
     countInStock: 0,
     minStockThreshold: 10,
-    imageUrl: '',
     isSubscriptionEligible: false,
     minSubscriptionQuantity: 1
 };
 
 const Products = () => {
+    const { user } = useContext(AuthContext);
+    const canManageProducts = isManagerOrAdmin(user);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -28,6 +32,8 @@ const Products = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [formData, setFormData] = useState(defaultFormData);
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
 
     const fetchProducts = async () => {
         try {
@@ -99,7 +105,16 @@ const Products = () => {
     };
 
     // Handlers
+    const resetImageState = () => {
+        setImagePreview((prev) => {
+            if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+            return null;
+        });
+        setImageFile(null);
+    };
+
     const openModal = (product = null) => {
+        resetImageState();
         if (product) {
             setEditingProduct(product);
             setFormData({
@@ -111,10 +126,10 @@ const Products = () => {
                 taxPercentage: product.taxPercentage || 0,
                 countInStock: product.countInStock || 0,
                 minStockThreshold: product.minStockThreshold || 10,
-                imageUrl: product.image || product.imageUrl || '', // Backend schema uses 'image'
                 isSubscriptionEligible: product.isSubscriptionEligible || false,
                 minSubscriptionQuantity: product.minSubscriptionQuantity || 1
             });
+            setImagePreview(getProductImageUrl(product.image || product.imageUrl));
         } else {
             setEditingProduct(null);
             setFormData(defaultFormData);
@@ -125,6 +140,7 @@ const Products = () => {
     const closeModal = () => {
         setIsModalOpen(false);
         setEditingProduct(null);
+        resetImageState();
     };
 
     const handleChange = (e) => {
@@ -135,15 +151,37 @@ const Products = () => {
         }));
     };
 
+    const handleImageChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+    };
+
+    const buildProductFormData = () => {
+        const payload = new FormData();
+        Object.entries(formData).forEach(([key, value]) => {
+            payload.append(key, value);
+        });
+        if (imageFile) {
+            payload.append('image', imageFile);
+        }
+        return payload;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!editingProduct && !imageFile) {
+            alert('Please upload a product image.');
+            return;
+        }
         try {
-            const dataToSubmit = { ...formData, image: formData.imageUrl };
+            const payload = buildProductFormData();
 
             if (editingProduct) {
-                await api.put(`/products/${editingProduct._id}`, dataToSubmit);
+                await api.put(`/products/${editingProduct._id}`, payload);
             } else {
-                await api.post('/products', dataToSubmit);
+                await api.post('/products', payload);
             }
 
             closeModal();
@@ -198,9 +236,11 @@ const Products = () => {
                         <ChevronDown className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
                     </div>
 
-                    <button onClick={() => openModal()} className="btn-primary flex justify-center items-center shadow-md whitespace-nowrap">
+                    {canManageProducts && (
+                      <button onClick={() => openModal()} className="btn-primary flex justify-center items-center shadow-md whitespace-nowrap">
                         <Plus className="h-5 w-5 mr-1" /> Add Product
-                    </button>
+                      </button>
+                    )}
                 </div>
             </div>
 
@@ -239,7 +279,9 @@ const Products = () => {
                                         <div className="flex items-center">Stock {getSortIcon('countInStock')}</div>
                                     </th>
                                     <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Sub Eligible</th>
-                                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                                    {canManageProducts && (
+                                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -248,8 +290,8 @@ const Products = () => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="h-10 w-10 flex-shrink-0 mr-3">
-                                                    {((product.image && product.image !== 'no-photo.jpg') || product.imageUrl) ? (
-                                                        <img className="h-10 w-10 rounded-full object-cover border border-gray-200" src={product.image || product.imageUrl} alt={product.name} />
+                                                    {hasProductImage(product.image || product.imageUrl) ? (
+                                                        <img className="h-10 w-10 rounded-full object-cover border border-gray-200" src={getProductImageUrl(product.image || product.imageUrl)} alt={product.name} />
                                                     ) : (
                                                         <div className="bg-gray-100 h-10 w-10 rounded-full flex items-center justify-center">
                                                             <Package className="h-5 w-5 text-gray-500" />
@@ -279,14 +321,16 @@ const Products = () => {
                                                 <span className="text-gray-400">No</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        {canManageProducts && (
+                                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <button onClick={() => openModal(product)} className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 p-2 rounded-md mr-2 transition-colors">
-                                                <Edit2 className="h-4 w-4" />
+                                              <Edit2 className="h-4 w-4" />
                                             </button>
                                             <button onClick={() => handleDelete(product._id)} className="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded-md transition-colors">
-                                                <Trash2 className="h-4 w-4" />
+                                              <Trash2 className="h-4 w-4" />
                                             </button>
-                                        </td>
+                                          </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>
@@ -341,8 +385,31 @@ const Products = () => {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
-                                        <input type="text" name="imageUrl" value={formData.imageUrl} onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" placeholder="/images/apples.png or http://..." />
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Product Image {!editingProduct && <span className="text-red-500">*</span>}
+                                        </label>
+                                        <div className="flex items-start gap-4">
+                                            <div className="h-20 w-20 flex-shrink-0 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center">
+                                                {imagePreview ? (
+                                                    <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <Package className="h-8 w-8 text-gray-300" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg border border-dashed border-gray-300 hover:border-primary-500 hover:bg-primary-50 cursor-pointer transition-all text-sm font-medium text-gray-700">
+                                                    <Upload className="h-4 w-4" />
+                                                    {imageFile ? 'Change image' : 'Upload image'}
+                                                    <input
+                                                        type="file"
+                                                        accept="image/jpeg,image/png,image/webp,image/gif"
+                                                        onChange={handleImageChange}
+                                                        className="hidden"
+                                                    />
+                                                </label>
+                                                <p className="mt-1 text-xs text-gray-500">JPEG, PNG, WebP or GIF. Max 5MB.</p>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div>

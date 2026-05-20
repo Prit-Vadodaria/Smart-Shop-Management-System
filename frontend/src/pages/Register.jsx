@@ -1,13 +1,12 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../shared/context/AuthContext';
-import { User, Mail, Lock, Shield, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, AlertCircle } from 'lucide-react';
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Customer'); // Default role
   const [localError, setLocalError] = useState('');
 
   const { register, error } = useContext(AuthContext);
@@ -17,7 +16,7 @@ const Register = () => {
     e.preventDefault();
     setLocalError('');
     try {
-      await register(name, email, password, role);
+      await register(name, email, password);
       navigate('/dashboard');
     } catch (err) {
       setLocalError(err.message);
@@ -93,24 +92,7 @@ const Register = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Role</label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Shield className="h-5 w-5 text-gray-400" />
-                </div>
-                <select
-                  className="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2 px-3 border bg-white"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                >
-                  <option value="Customer">Customer</option>
-                  <option value="Staff">Staff</option>
-                  <option value="Manager">Manager</option>
-                  <option value="Admin">Admin</option>
-                </select>
-              </div>
-            </div>
+
 
             <div>
               <button

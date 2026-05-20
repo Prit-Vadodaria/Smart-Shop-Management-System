@@ -23,8 +23,19 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['Admin', 'Manager', 'Staff', 'Customer'],
-    default: 'Customer'
+    enum: ['admin', 'employee', 'customer'],
+    default: 'customer'
+  },
+  /** manager = supervises store ops; staff = assigned orders only (employees only) */
+  employeeType: {
+    type: String,
+    enum: ['manager', 'staff'],
+    default: 'staff'
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+    required: true
   },
   createdAt: {
     type: Date,

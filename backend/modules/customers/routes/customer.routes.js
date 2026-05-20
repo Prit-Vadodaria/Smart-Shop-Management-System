@@ -6,7 +6,7 @@ import {
   getCustomers,
   registerQuickCustomer
 } from '../controllers/customer.controller.js';
-import { protect, authorize } from '../../../middleware/authMiddleware.js';
+import { protect, authorize, authorizeManager } from '../../../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -18,9 +18,9 @@ router.route('/address')
   .post(protect, addAddress);
 
 router.route('/quick-customer')
-  .post(protect, authorize('Admin', 'Manager'), registerQuickCustomer);
+  .post(protect, authorizeManager, registerQuickCustomer);
 
 router.route('/')
-  .get(protect, authorize('Admin', 'Manager'), getCustomers);
+  .get(protect, authorize('admin', 'employee'), getCustomers);
 
 export default router;

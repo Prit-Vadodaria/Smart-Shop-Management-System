@@ -19,8 +19,8 @@ export const processPayment = async (req, res, next) => {
     const payment = new Payment({
       transactionId: transactionId || `CASH-${Date.now()}`,
       orderId,
-      customer: req.user.role === 'Customer' ? req.user._id : req.body.customerId,
-      staff: req.user.role !== 'Customer' ? req.user._id : null,
+      customer: req.user.role === 'customer' ? req.user._id : req.body.customerId,
+      staff: req.user.role !== 'customer' ? req.user._id : null,
       paymentMode,
       amount,
       cashAmount,

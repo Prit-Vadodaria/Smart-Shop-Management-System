@@ -79,8 +79,8 @@ export const addAddress = async (req, res, next) => {
 // @access  Private/Admin/Manager
 export const getCustomers = async (req, res, next) => {
   try {
-    // Fetch all users with role 'Customer'
-    const customers = await User.find({ role: 'Customer' }).select('name email role');
+    // Fetch all users with role 'customer'
+    const customers = await User.find({ role: 'customer' }).select('name email role');
     
     // For each customer, try to find their profile
     const results = await Promise.all(customers.map(async (user) => {
@@ -124,7 +124,7 @@ export const registerQuickCustomer = async (req, res, next) => {
       name,
       email: finalEmail,
       password,
-      role: 'Customer'
+      role: 'customer'
     });
 
     // Automatically provision the CustomerProfile

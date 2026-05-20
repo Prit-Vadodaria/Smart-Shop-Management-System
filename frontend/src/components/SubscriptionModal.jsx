@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Calendar } from 'lucide-react';
 import api from '../shared/services/api';
+import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 
 const SubscriptionModal = ({ products = [], onClose }) => {
   // If products is just a single object, wrap it in array
@@ -100,8 +101,8 @@ const SubscriptionModal = ({ products = [], onClose }) => {
                 <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                     {items.map(p => (
                         <div key={p._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                            {p.image && p.image !== 'no-photo.jpg' ? (
-                                <img src={p.image} alt={p.name} className="w-10 h-10 object-cover rounded-lg" />
+                            {hasProductImage(p.image) ? (
+                                <img src={getProductImageUrl(p.image)} alt={p.name} className="w-10 h-10 object-cover rounded-lg" />
                             ) : (
                                 <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center"><Calendar className="h-4 w-4 text-gray-400" /></div>
                             )}

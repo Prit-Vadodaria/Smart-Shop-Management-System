@@ -60,22 +60,27 @@ const Navbar = () => {
                 <Link to="/dashboard" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                   Dashboard
                 </Link>
-                {(user.role === 'Admin' || user.role === 'Manager') && (
+                {(user.role === 'admin' || (user.role === 'employee' && user.employeeType === 'manager')) && (
+                  <Link to="/products" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                    Products
+                  </Link>
+                )}
+                {user.role === 'admin' && (
                   <>
-                    <Link to="/products" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
-                      Products
+                    <Link to="/employees" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                      Employees
                     </Link>
                     <Link to="/subscriptions" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                       Subscriptions
                     </Link>
                   </>
                 )}
-                {(user.role === 'Admin' || user.role === 'Manager' || user.role === 'Staff') && (
+                {(user.role === 'admin' || user.role === 'employee') && (
                   <Link to="/store-orders" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                     Orders & POS
                   </Link>
                 )}
-                {user.role === 'Customer' && (
+                {user.role === 'customer' && (
                   <>
                     <Link to="/shop" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                       Shop
@@ -135,7 +140,7 @@ const Navbar = () => {
                       </div>
                     )}
                   </div>
-                  {user.role === 'Customer' && (
+                  {user.role === 'customer' && (
                     <button
                       onClick={() => navigate('/cart')}
                       className="relative p-1 rounded-full text-gray-400 hover:text-primary-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -154,7 +159,15 @@ const Navbar = () => {
                   <div className="bg-primary-100 p-2 rounded-full text-primary-600">
                     <User className="h-4 w-4" />
                   </div>
-                  <span>{user.name} ({user.role})</span>
+                  <span>
+                    {user.name} (
+                    {user.role === 'employee'
+                      ? user.employeeType === 'manager'
+                        ? 'Manager'
+                        : 'Staff'
+                      : user.role}
+                    )
+                  </span>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -176,7 +189,7 @@ const Navbar = () => {
           </div>
 
           <div className="-mr-2 flex items-center gap-2 sm:hidden">
-            {user && user.role === 'Customer' && (
+            {user && user.role === 'customer' && (
               <button
                 onClick={() => navigate('/cart')}
                 className="relative p-1 rounded-full text-gray-400 hover:text-primary-600 transition-colors focus:outline-none"
@@ -212,17 +225,22 @@ const Navbar = () => {
                 <Link to="/dashboard" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                   Dashboard
                 </Link>
-                {(user.role === 'Admin' || user.role === 'Manager') && (
+                {(user.role === 'admin' || (user.role === 'employee' && user.employeeType === 'manager')) && (
+                  <Link to="/products" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                    Products
+                  </Link>
+                )}
+                {user.role === 'admin' && (
                   <>
-                    <Link to="/products" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
-                      Products
+                    <Link to="/employees" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                      Employees
                     </Link>
                     <Link to="/subscriptions" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                       Subscriptions
                     </Link>
                   </>
                 )}
-                {(user.role === 'Admin' || user.role === 'Manager' || user.role === 'Staff') && (
+                {(user.role === 'admin' || user.role === 'employee') && (
                   <Link to="/store-orders" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                     Orders & POS
                   </Link>

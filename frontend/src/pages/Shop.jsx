@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../shared/services/api';
+import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 import { ShoppingCart, Search, Filter, ChevronDown, ArrowUpDown, CalendarClock, CheckCircle } from 'lucide-react';
 import { CartContext } from '../context/CartContext';
 
@@ -93,8 +94,8 @@ const Shop = () => {
                     {filteredProducts.map(product => (
                         <div key={product._id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group flex flex-col">
                             <div className="relative w-full h-56 overflow-hidden bg-gray-50">
-                                {(product.image && product.image !== 'no-photo.jpg') || product.imageUrl ? (
-                                    <img src={product.image || product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
+                                {hasProductImage(product.image || product.imageUrl) ? (
+                                    <img src={getProductImageUrl(product.image || product.imageUrl)} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center bg-gray-100">
                                         <ShoppingCart className="h-12 w-12 text-gray-200" />

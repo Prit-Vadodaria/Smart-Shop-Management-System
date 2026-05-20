@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Truck, Store, Clock, CalendarDays, ExternalLink, ChevronRight, CheckCircle, MapPin } from 'lucide-react';
 import api from '../shared/services/api';
+import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 
 const MyOrders = () => {
     const [orders, setOrders] = useState([]);
@@ -131,8 +132,8 @@ const MyOrders = () => {
                                             {order.orderItems.map((item, idx) => (
                                                 <div key={idx} className="flex items-center gap-3">
                                                     <div className="h-12 w-12 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200">
-                                                        {item.image ? (
-                                                            <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                                                        {hasProductImage(item.image) ? (
+                                                            <img src={getProductImageUrl(item.image)} alt={item.name} className="h-full w-full object-cover" />
                                                         ) : (
                                                             <Package className="h-full w-full p-2 text-gray-400" />
                                                         )}

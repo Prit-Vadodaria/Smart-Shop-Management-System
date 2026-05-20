@@ -18,22 +18,39 @@ export const protect = async (req, res, next) => {
 
       // Get user from the token
       req.user = await User.findById(decoded.id).select('-password');
-      next();
+
+      if (!req.user) {
+        return res.status(401).json({ success: false, message: 'Not authorized, user not found' });
+      }
+
+      // Check if user is active
+      if (req.user.isActive === false) {
+        return res.status(401).json({ success: false, message: 'Not authorized, account is deactivated' });
+      }
+
+      return next();
     } catch (error) {
       console.error(error);
-      res.status(401).json({ success: false, message: 'Not authorized, token failed' });
+      return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
     }
   }
 
   if (!token) {
-    res.status(401).json({ success: false, message: 'Not authorized, no token' });
+    return res.status(401).json({ success: false, message: 'Not authorized, no token' });
   }
 };
 
 // Grant access to specific roles
 export const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    if (!req.user || !req.user.role) {
+      return res.status(401).json({ success: false, message: 'Not authorized, no user role' });
+    }
+
+    const lowercaseRoles = roles.map(r => r.toLowerCase());
+    const userRole = req.user.role.toLowerCase();
+
+    if (!lowercaseRoles.includes(userRole)) {
       return res.status(403).json({ 
         success: false, 
         message: `User role ${req.user.role} is not authorized to access this route` 
@@ -41,4 +58,21 @@ export const authorize = (...roles) => {
     }
     next();
   };
+};
+
+/** Admin or employee with manager position */
+export const authorizeManager = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Not authorized' });
+  }
+  if (req.user.role === 'admin') {
+    return next();
+  }
+  if (req.user.role === 'employee' && req.user.employeeType === 'manager') {
+    return next();
+  }
+  return res.status(403).json({
+    success: false,
+    message: 'Manager or admin access required',
+  });
 };

@@ -75,7 +75,7 @@ export const updateSubscriptionListSettings = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Subscription list not found' });
     }
 
-    if (list.customer.toString() !== req.user._id.toString() && req.user.role !== 'Admin' && req.user.role !== 'Manager') {
+    if (list.customer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(401).json({ success: false, message: 'Not authorized' });
     }
 

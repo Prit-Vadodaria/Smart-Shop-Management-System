@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag } from 'lucide-react';
 import api from '../shared/services/api';
+import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 
 const Cart = () => {
     const { cartItems, removeFromCart, updateQuantity, cartTotalPrice, cartTotalCount } = useContext(CartContext);
@@ -66,8 +67,8 @@ const Cart = () => {
                     {cartItems.map((item) => (
                         <div key={item._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-4 hover:shadow-md transition-shadow group">
                             <div className="h-24 w-24 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
-                                {(item.image || item.imageUrl) ? (
-                                    <img src={item.image || item.imageUrl} alt={item.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                {hasProductImage(item.image || item.imageUrl) ? (
+                                    <img src={getProductImageUrl(item.image || item.imageUrl)} alt={item.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                 ) : (
                                     <div className="h-full w-full flex items-center justify-center bg-gray-100">
                                         <ShoppingBag className="h-8 w-8 text-gray-300" />

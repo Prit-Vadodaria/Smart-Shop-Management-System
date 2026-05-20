@@ -26,7 +26,10 @@ const StoreOrders = () => {
     const [allProducts, setAllProducts] = useState([]);
     const [allCustomers, setAllCustomers] = useState([]);
 
-    const isManagement = user.role === 'Admin' || user.role === 'Manager';
+    const isManagement =
+      user.role === 'admin' ||
+      (user.role === 'employee' && user.employeeType === 'manager');
+    const canUsePOS = user.role === 'admin' || user.role === 'employee';
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -242,13 +245,17 @@ const StoreOrders = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-4 border-b border-gray-200">
                 <div>
                     <h1 className="text-3xl font-black text-gray-900 tracking-tight">POS & Orders</h1>
-                    <p className="text-gray-500 font-medium mt-1">Manage and assign customer orders globally</p>
+                    <p className="text-gray-500 font-medium mt-1">
+                      {isManagement
+                        ? 'Manage and assign customer orders globally'
+                        : 'Process assigned orders and in-store POS sales'}
+                    </p>
                 </div>
                 <div className="mt-4 md:mt-0 flex gap-3">
                     <span className="bg-white px-4 py-2 rounded-xl text-sm font-bold text-gray-600 border border-gray-200 shadow-sm">
                         Total: {orders.length}
                     </span>
-                    {isManagement && (
+                    {canUsePOS && (
                         <button
                             onClick={() => setIsPOSOpen(true)}
                             className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-primary-200 transition-all active:scale-95"

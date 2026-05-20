@@ -2,6 +2,15 @@ import Product from '../models/Product.js';
 import User from '../../auth/models/User.js';
 import Subscription from '../../subscriptions/models/Subscription.js';
 import Notification from '../../notifications/models/Notification.js';
+import { getUploadedImagePath } from '../../../middleware/uploadMiddleware.js';
+import { parseProductBody } from '../../../utils/parseProductBody.js';
+
+const applyUploadedImage = (body, file) => {
+  if (file) {
+    body.image = getUploadedImagePath(file.filename);
+  }
+  return body;
+};
 
 // @desc    Fetch all products
 // @route   GET /api/products
@@ -19,7 +28,7 @@ export const getProducts = async (req, res, next) => {
 
     // Standard lookup only returns soft-active products (isActive: true)
     // Staff/Admin can bypass by adding showInactive=true in query
-    const showInactive = req.query.showInactive === 'true' && req.user && ['Admin', 'Manager', 'Staff'].includes(req.user.role);
+    const showInactive = req.query.showInactive === 'true' && req.user && ['admin', 'employee'].includes(req.user.role);
     const filter = showInactive ? { ...keyword } : { ...keyword, isActive: true };
 
     const products = await Product.find(filter);
@@ -36,7 +45,7 @@ export const getProductById = async (req, res, next) => {
   try {
     const product = await Product.findById(req.params.id);
 
-    if (product && (product.isActive || (req.query.showInactive === 'true' && req.user && ['Admin', 'Manager', 'Staff'].includes(req.user.role)))) {
+    if (product && (product.isActive || (req.query.showInactive === 'true' && req.user && ['admin', 'employee'].includes(req.user.role)))) {
       res.json({ success: true, data: product });
     } else {
       res.status(404).json({ success: false, message: 'Product not found or has been removed' });
@@ -76,8 +85,8 @@ export const getDashboardStats = async (req, res, next) => {
     // Total Products in Stock: Sum of countInStock
     const totalProductsInStock = products.reduce((acc, p) => acc + p.countInStock, 0);
     
-    // Total Customers: Count users with role 'Customer'
-    const totalCustomers = await User.countDocuments({ role: 'Customer' });
+    // Total Customers: Count users with role 'customer'
+    const totalCustomers = await User.countDocuments({ role: 'customer' });
     
     // Active Subscriptions: Count active, non-empty subscription lists
     const activeSubscriptions = await Subscription.countDocuments({ 
@@ -104,15 +113,14 @@ export const getDashboardStats = async (req, res, next) => {
 // @access  Private/Admin/Manager/Staff
 export const createProduct = async (req, res, next) => {
   try {
-    const { name } = req.body;
-    
-    // Check if product with same name already exists (regardless of isActive, or if inactive, we could re-activate)
+    const body = applyUploadedImage(parseProductBody(req.body), req.file);
+    const { name } = body;
+
     const productExists = await Product.findOne({ name });
     if (productExists) {
       if (!productExists.isActive) {
-        // If it was soft-deleted, reactivate it and update details
         productExists.isActive = true;
-        Object.assign(productExists, req.body, { user: req.user._id });
+        Object.assign(productExists, body, { user: req.user._id });
         const savedProduct = await productExists.save();
         return res.status(200).json({ success: true, message: 'Reactivated existing product', data: savedProduct });
       }
@@ -120,7 +128,7 @@ export const createProduct = async (req, res, next) => {
     }
 
     const product = new Product({
-      ...req.body,
+      ...body,
       user: req.user._id,
     });
 
@@ -136,11 +144,11 @@ export const createProduct = async (req, res, next) => {
 // @access  Private/Admin/Manager
 export const updateProduct = async (req, res, next) => {
   try {
+    const body = applyUploadedImage(parseProductBody(req.body), req.file);
     const {
       name,
       price,
       description,
-      image,
       brand,
       category,
       countInStock,
@@ -148,32 +156,31 @@ export const updateProduct = async (req, res, next) => {
       minStockThreshold,
       isSubscriptionEligible,
       minSubscriptionQuantity,
-      isActive
-    } = req.body;
+      isActive,
+    } = body;
 
     const product = await Product.findById(req.params.id);
 
     if (product) {
-      // Check if product name is being updated to something already taken
       if (name && name !== product.name) {
         const productExists = await Product.findOne({ name });
         if (productExists) {
-           return res.status(400).json({ success: false, message: 'Another product with this name already exists' });
+          return res.status(400).json({ success: false, message: 'Another product with this name already exists' });
         }
       }
 
-      product.name = name || product.name;
-      product.price = price || product.price;
-      product.description = description || product.description;
-      product.image = image || product.image;
-      product.brand = brand || product.brand;
-      product.category = category || product.category;
-      product.countInStock = countInStock !== undefined ? countInStock : product.countInStock;
-      product.taxPercentage = taxPercentage !== undefined ? taxPercentage : product.taxPercentage;
-      product.minStockThreshold = minStockThreshold !== undefined ? minStockThreshold : product.minStockThreshold;
-      product.isSubscriptionEligible = isSubscriptionEligible !== undefined ? isSubscriptionEligible : product.isSubscriptionEligible;
-      product.minSubscriptionQuantity = minSubscriptionQuantity !== undefined ? minSubscriptionQuantity : product.minSubscriptionQuantity;
-      product.isActive = isActive !== undefined ? isActive : product.isActive;
+      if (name) product.name = name;
+      if (price !== undefined) product.price = price;
+      if (description) product.description = description;
+      if (body.image) product.image = body.image;
+      if (brand) product.brand = brand;
+      if (category) product.category = category;
+      if (countInStock !== undefined) product.countInStock = countInStock;
+      if (taxPercentage !== undefined) product.taxPercentage = taxPercentage;
+      if (minStockThreshold !== undefined) product.minStockThreshold = minStockThreshold;
+      if (isSubscriptionEligible !== undefined) product.isSubscriptionEligible = isSubscriptionEligible;
+      if (minSubscriptionQuantity !== undefined) product.minSubscriptionQuantity = minSubscriptionQuantity;
+      if (isActive !== undefined) product.isActive = isActive;
 
       const updatedProduct = await product.save();
       res.json({ success: true, data: updatedProduct });

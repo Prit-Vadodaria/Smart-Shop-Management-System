@@ -120,7 +120,7 @@ const Dashboard = () => {
   });
 
   const fetchStats = async () => {
-    if (user.role === 'Admin' || user.role === 'Manager') {
+    if (user.role === 'admin') {
       try {
         const { data } = await api.get('/products/dashboard-stats');
         setStats(data.data);
@@ -131,7 +131,7 @@ const Dashboard = () => {
   };
 
   const fetchLowStock = async () => {
-    if (user.role === 'Admin' || user.role === 'Manager') {
+    if (user.role === 'admin') {
       try {
         setIsLowStockLoading(true);
         const { data } = await api.get('/products/low-stock');
@@ -145,7 +145,7 @@ const Dashboard = () => {
   };
 
   const fetchNumberOfOrdersofCustomer = async () => {
-    if (user.role === 'Customer') {
+    if (user.role === 'customer') {
       try {
         const { data } = await api.get('/orders/myorders');
         setNumberOfOrders(data.length);
@@ -156,7 +156,7 @@ const Dashboard = () => {
   };
 
   const fetchMySubscriptionsCount = async () => {
-    if (user.role === 'Customer') {
+    if (user.role === 'customer') {
       try {
         const { data } = await api.get('/subscriptions/my-lists');
         const activeCount = data.filter(l => l.items?.length > 0 && l.status === 'Active').length;
@@ -168,14 +168,14 @@ const Dashboard = () => {
   };
 
   const fetchAssignedOrders = async () => {
-    if (user.role === 'Staff') {
+    if (user.role === 'employee') {
       try {
         setIsOrdersLoading(true);
         const { data } = await api.get('/orders');
         const sortedOrders = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setAssignedOrders(sortedOrders);
       } catch (err) {
-        console.error('Error fetching assigned orders', err);
+        console.error('Error fetching orders', err);
       } finally {
         setIsOrdersLoading(false);
       }
@@ -197,12 +197,17 @@ const Dashboard = () => {
           Welcome back, {user.name}!
         </h1>
         <p className="text-gray-500 mt-2">
-          Here's an overview of your activity today. role: {user.role}
+          Here's an overview of your activity today.
+          {user.role === 'employee' && (
+            <span className="ml-1 capitalize text-primary-600 font-medium">
+              ({user.employeeType === 'manager' ? 'Manager' : 'Staff'})
+            </span>
+          )}
         </p>
       </div>
 
       {/* Low Stock Notification Banner */}
-      {(user.role === 'Admin' || user.role === 'Manager') && lowStockProducts.length > 0 && (
+      {user.role === 'admin' && lowStockProducts.length > 0 && (
         <div className="mb-8 bg-red-50 border-l-4 border-red-500 rounded-r-xl p-6 shadow-sm animate-in fade-in slide-in-from-top duration-500">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
@@ -246,7 +251,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {user.role === 'Admin' || user.role === 'Manager' ? (
+      {user.role === 'admin' ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <StatCard title="Total Inventory Value" value={`₹${stats.totalInventoryValue.toLocaleString()}`} icon={ShoppingBag} />
@@ -262,12 +267,11 @@ const Dashboard = () => {
             </div>
           </div>
         </>
-      ) : user.role === 'Staff' ? (
+      ) : user.role === 'employee' ? (
         <div className="space-y-8">
-          {/* Staff Stats Summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <StatCard
-              title="Assigned Orders"
+              title={user.employeeType === 'manager' ? 'Store Orders' : 'Assigned Orders'}
               value={assignedOrders.length}
               icon={ShoppingBag}
             />
@@ -287,7 +291,7 @@ const Dashboard = () => {
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <Package className="h-6 w-6 text-primary-600" />
-                My Assigned Orders
+                {user.employeeType === 'manager' ? 'Store Orders Overview' : 'My Assigned Orders'}
               </h3>
               <a href="/store-orders" className="btn-primary py-1.5 px-4 text-xs">
                 Manage All Orders
@@ -301,8 +305,14 @@ const Dashboard = () => {
                 <div className="bg-gray-50 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
                   <Package className="h-8 w-8 text-gray-300" />
                 </div>
-                <h4 className="text-lg font-bold text-gray-800">No Orders Assigned</h4>
-                <p className="text-gray-500 text-sm max-w-xs mx-auto mt-2">You don't have any orders assigned for processing at the moment.</p>
+                <h4 className="text-lg font-bold text-gray-800">
+                  {user.employeeType === 'manager' ? 'No Store Orders' : 'No Orders Assigned'}
+                </h4>
+                <p className="text-gray-500 text-sm max-w-xs mx-auto mt-2">
+                  {user.employeeType === 'manager'
+                    ? 'There are no orders in the system right now.'
+                    : "You don't have any orders assigned for processing at the moment."}
+                </p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">

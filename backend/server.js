@@ -2,10 +2,13 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import { validateEnv } from './utils/envValidator.js';
 import globalErrorHandler from './middleware/errorMiddleware.js';
 import { logger } from './utils/logger.js';
+import bootstrapAdmin from './utils/bootstrapAdmin.js';
 
 // Route imports
 import authRoutes from './modules/auth/routes/auth.routes.js';
@@ -25,13 +28,18 @@ dotenv.config();
 validateEnv();
 
 // Connect to database
-connectDB();
+await connectDB();
+await bootstrapAdmin();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
 // Middleware
 app.use(express.json());
 app.use(cors());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Development logging
 if (process.env.NODE_ENV === 'development') {

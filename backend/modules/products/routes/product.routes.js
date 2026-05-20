@@ -8,23 +8,24 @@ import {
   getLowStockProducts,
   getDashboardStats,
 } from '../controllers/product.controller.js';
-import { protect, authorize } from '../../../middleware/authMiddleware.js';
+import { protect, authorize, authorizeManager } from '../../../middleware/authMiddleware.js';
+import { uploadProductImage } from '../../../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
 router.route('/')
   .get(getProducts)
-  .post(protect, authorize('Admin', 'Manager', 'Staff'), createProduct);
+  .post(protect, authorizeManager, uploadProductImage, createProduct);
 
 router.route('/low-stock')
-  .get(protect, authorize('Admin', 'Manager'), getLowStockProducts);
+  .get(protect, authorize('admin'), getLowStockProducts);
 
 router.route('/dashboard-stats')
-  .get(protect, authorize('Admin', 'Manager'), getDashboardStats);
+  .get(protect, authorize('admin'), getDashboardStats);
 
 router.route('/:id')
   .get(getProductById)
-  .put(protect, authorize('Admin', 'Manager'), updateProduct)
-  .delete(protect, authorize('Admin', 'Manager'), deleteProduct);
+  .put(protect, authorizeManager, uploadProductImage, updateProduct)
+  .delete(protect, authorize('admin'), deleteProduct);
 
 export default router;

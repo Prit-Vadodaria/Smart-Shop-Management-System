@@ -12,13 +12,13 @@ import { protect, authorize } from '../../../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.route('/')
-  .get(protect, authorize('Admin', 'Manager'), getAllSubscriptions);
+  .get(protect, authorize('admin'), getAllSubscriptions);
 
 router.route('/active')
-  .get(protect, authorize('Admin', 'Manager'), getActiveSubscriptions);
+  .get(protect, authorize('admin'), getActiveSubscriptions);
 
 router.route('/generate-orders')
-  .post(protect, authorize('Admin', 'Manager'), generateDailyOrders);
+  .post(protect, authorize('admin'), generateDailyOrders);
 
 router.route('/my-lists')
   .get(protect, getMySubscriptionLists);

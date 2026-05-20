@@ -9,10 +9,10 @@ import { protect, authorize } from '../../../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.route('/')
-  .get(protect, authorize('Admin', 'Manager'), getSuppliers)
-  .post(protect, authorize('Admin', 'Manager'), createSupplier);
+  .get(protect, authorize('admin'), getSuppliers)
+  .post(protect, authorize('admin'), createSupplier);
 
 router.route('/:id')
-  .put(protect, authorize('Admin', 'Manager'), updateSupplier);
+  .put(protect, authorize('admin'), updateSupplier);
 
 export default router;

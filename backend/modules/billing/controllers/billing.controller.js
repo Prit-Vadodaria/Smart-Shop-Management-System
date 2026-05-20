@@ -41,7 +41,11 @@ export const addOrderItems = async (req, res, next) => {
     let finalCustomer = req.user._id;
     let finalCustomerName = null;
 
-    if (req.user.role === 'Admin' || req.user.role === 'Manager') {
+    const canPosForCustomer =
+      req.user.role === 'admin' ||
+      req.user.role === 'employee';
+
+    if (canPosForCustomer) {
       if (customerId) {
         finalCustomer = customerId;
       } else if (customerName) {
@@ -205,8 +209,8 @@ export const getMyOrders = async (req, res, next) => {
 export const getOrders = async (req, res, next) => {
   try {
     let query = {};
-    // If user is Staff, only show orders assigned to them
-    if (req.user.role === 'Staff') {
+    // Staff see only assigned orders; managers see all (like admin)
+    if (req.user.role === 'employee' && req.user.employeeType === 'staff') {
       query = { assignedTo: req.user._id };
     }
 
@@ -268,7 +272,7 @@ export const cancelOrder = async (req, res, next) => {
 
     if (order) {
       // Check if order belongs to user or if user is Admin/Manager
-      if (order.customer.toString() !== req.user._id.toString() && !['Admin', 'Manager'].includes(req.user.role)) {
+      if (order.customer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
         res.status(401).json({ success: false, message: 'Not authorized to cancel this order' });
         return;
       }
@@ -306,7 +310,7 @@ export const deleteOrder = async (req, res, next) => {
     const order = await Order.findById(req.params.id);
 
     if (order) {
-      if (['Admin', 'Manager'].includes(req.user.role)) {
+      if (req.user.role === 'admin') {
         await Order.deleteOne({ _id: order._id });
         res.json({ success: true, message: 'Order deleted successfully' });
       } else {

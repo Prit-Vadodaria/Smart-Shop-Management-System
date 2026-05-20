@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../shared/services/api';
+import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 import { Calendar, Play, Pause, Trash2, Plus, Search, Info, CheckCircle, ChevronRight, Settings } from 'lucide-react';
 
 const MySubscriptions = () => {
@@ -242,7 +243,11 @@ const MySubscriptions = () => {
                                     {currentList.items.map(item => (
                                         <div key={item.product._id} className="flex items-center gap-4 p-4 rounded-3xl border border-gray-100 hover:border-primary-100 transition-colors bg-gray-50/20">
                                             <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white shadow-sm flex-shrink-0">
-                                                <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                                                {hasProductImage(item.product.image) ? (
+                                                    <img src={getProductImageUrl(item.product.image)} alt={item.product.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full bg-gray-100" />
+                                                )}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h4 className="font-bold text-gray-900 truncate">{item.product.name}</h4>
@@ -311,7 +316,11 @@ const MySubscriptions = () => {
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
-                                                <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                                                {hasProductImage(product.image) ? (
+                                                    <img src={getProductImageUrl(product.image)} alt={product.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full bg-gray-100" />
+                                                )}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h4 className="font-bold text-sm text-gray-900 truncate">{product.name}</h4>
