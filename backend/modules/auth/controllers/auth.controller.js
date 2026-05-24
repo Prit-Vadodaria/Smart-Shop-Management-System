@@ -1,10 +1,14 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { assertValidPassword, PASSWORD_RULES, validatePassword } from '../../../utils/passwordValidation.js';
+import { buildResetPasswordUrl, sendPasswordResetEmail } from '../../../utils/passwordResetEmail.js';
 
-// Generate token
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRE || '30d';
+
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '30d',
+    expiresIn: JWT_EXPIRES_IN,
   });
 };
 
@@ -21,12 +25,46 @@ const formatAuthUser = (user) => {
   return payload;
 };
 
+const buildAuthResponse = (user) => {
+  const token = generateToken(user._id);
+  const decoded = jwt.decode(token);
+  const expiresAt =
+    decoded?.exp != null ? new Date(decoded.exp * 1000).toISOString() : null;
+
+  return {
+    success: true,
+    token,
+    expiresAt,
+    expiresIn: JWT_EXPIRES_IN,
+    user: formatAuthUser(user),
+  };
+};
+
+// @desc    Password strength rules (for UI)
+// @route   GET /api/auth/password-rules
+// @access  Public
+export const getPasswordRules = (req, res) => {
+  res.status(200).json({
+    success: true,
+    rules: PASSWORD_RULES,
+    hints: [
+      `At least ${PASSWORD_RULES.minLength} characters`,
+      'One uppercase letter (A–Z)',
+      'One lowercase letter (a–z)',
+      'One number (0–9)',
+      'One special character (!@#$…)',
+    ],
+  });
+};
+
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
 export const register = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
+
+    assertValidPassword(password);
 
     // Check if user exists
     const userExists = await User.findOne({ email });
@@ -44,11 +82,7 @@ export const register = async (req, res, next) => {
       isActive: true
     });
 
-    res.status(201).json({
-      success: true,
-      token: generateToken(user._id),
-      user: formatAuthUser(user),
-    });
+    res.status(201).json(buildAuthResponse(user));
   } catch (error) {
     next(error);
   }
@@ -85,12 +119,7 @@ export const login = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    res.status(200).json({
-      success: true,
-      token: generateToken(user._id),
-      user: formatAuthUser(user),
-    });
-
+    res.status(200).json(buildAuthResponse(user));
   } catch (error) {
     next(error);
   }
@@ -102,10 +131,18 @@ export const login = async (req, res, next) => {
 export const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
-    
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (user.isActive === false) {
+      return res.status(401).json({ success: false, message: 'Not authorized, account is deactivated' });
+    }
+
     res.status(200).json({
       success: true,
-      data: user
+      user: formatAuthUser(user),
     });
   } catch (error) {
     next(error);
@@ -143,9 +180,7 @@ export const createEmployee = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Position must be manager or staff.' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters.' });
-    }
+    assertValidPassword(password);
 
     const userExists = await User.findOne({ email });
     if (userExists) {
@@ -198,9 +233,7 @@ export const getEmployees = async (req, res, next) => {
 export const resetEmployeePassword = async (req, res, next) => {
   try {
     const { newPassword } = req.body;
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ success: false, message: 'Please provide a valid password of at least 6 characters.' });
-    }
+    assertValidPassword(newPassword);
 
     const employee = await User.findById(req.params.id);
     if (!employee || employee.role !== 'employee') {
@@ -281,4 +314,146 @@ export const updateEmployeePosition = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// @desc    Request password reset email
+// @route   POST /api/auth/forgot-password
+// @access  Public
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Please provide your email address' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    const genericMessage =
+      'If an account exists with that email, you will receive password reset instructions shortly.';
+
+    if (!user || user.isActive === false) {
+      return res.status(200).json({ success: true, message: genericMessage });
+    }
+
+    const resetToken = user.getResetPasswordToken();
+    await user.save({ validateBeforeSave: false });
+
+    const resetUrl = buildResetPasswordUrl(resetToken);
+    await sendPasswordResetEmail({ to: user.email, resetUrl });
+
+    const payload = { success: true, message: genericMessage };
+    if (process.env.PASSWORD_RESET_DEV_EXPOSE === 'true') {
+      payload.resetUrl = resetUrl;
+    }
+
+    res.status(200).json(payload);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reset password with token from email
+// @route   PUT /api/auth/reset-password/:token
+// @access  Public
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    assertValidPassword(password);
+
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(req.params.token)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    }).select('+password +resetPasswordToken +resetPasswordExpire');
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset link. Please request a new one.',
+      });
+    }
+
+    if (user.isActive === false) {
+      return res.status(400).json({
+        success: false,
+        message: 'This account is deactivated. Contact your administrator.',
+      });
+    }
+
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successful. You can now sign in.',
+    });
+  } catch (error) {
+    if (error.statusCode === 400) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    next(error);
+  }
+};
+
+// @desc    Change password for logged-in user
+// @route   PUT /api/auth/change-password
+// @access  Private
+export const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide your current password and a new password',
+      });
+    }
+
+    assertValidPassword(newPassword);
+
+    const user = await User.findById(req.user.id).select('+password');
+
+    const isMatch = await user.matchPassword(currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    const sameAsOld = await user.matchPassword(newPassword);
+    if (sameAsOld) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from your current password',
+      });
+    }
+
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully',
+    });
+  } catch (error) {
+    if (error.statusCode === 400) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    next(error);
+  }
+};
+
+// @desc    Validate password strength (client helper)
+// @route   POST /api/auth/validate-password
+// @access  Public
+export const validatePasswordEndpoint = (req, res) => {
+  const { password } = req.body;
+  const result = validatePassword(password);
+  res.status(200).json({ success: true, ...result });
 };

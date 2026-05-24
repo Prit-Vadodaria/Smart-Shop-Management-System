@@ -2,6 +2,8 @@ import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../shared/context/AuthContext';
 import { User, Mail, Lock, AlertCircle } from 'lucide-react';
+import PasswordStrength from '../components/PasswordStrength';
+import { validatePassword } from '../shared/utils/passwordValidation';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -15,6 +17,13 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLocalError('');
+
+    const validation = validatePassword(password);
+    if (!validation.valid) {
+      setLocalError(validation.message);
+      return;
+    }
+
     try {
       await register(name, email, password);
       navigate('/dashboard');
@@ -90,9 +99,8 @@ const Register = () => {
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
+              <PasswordStrength password={password} />
             </div>
-
-
 
             <div>
               <button

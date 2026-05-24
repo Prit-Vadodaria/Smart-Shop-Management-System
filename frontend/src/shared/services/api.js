@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { getToken, isTokenExpired } from '../utils/session.js';
+import { notifySessionExpired } from './sessionEvents.js';
 
 export const API_ORIGIN = import.meta.env.VITE_API_ORIGIN || 'http://localhost:5000';
 
@@ -6,17 +8,37 @@ const api = axios.create({
   baseURL: `${API_ORIGIN}/api`,
 });
 
-// Add a request interceptor to add the auth token to headers
+const isPublicAuthRequest = (config) => {
+  const url = config?.url || '';
+  return /\/auth\/(login|register|forgot-password|password-rules|validate-password)(\/|$)/.test(url)
+    || /\/auth\/reset-password\//.test(url);
+};
+
 api.interceptors.request.use(
   (config) => {
-    const userInfo = localStorage.getItem('userInfo');
-    if (userInfo) {
-      const parsedUserInfo = JSON.parse(userInfo);
-      config.headers.Authorization = `Bearer ${parsedUserInfo.token}`;
+    const token = getToken();
+    if (token) {
+      if (isTokenExpired(token)) {
+        notifySessionExpired('expired');
+        return Promise.reject(new Error('Session expired'));
+      }
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
+  (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (response) => response,
   (error) => {
+    const status = error.response?.status;
+    const config = error.config;
+
+    if (status === 401 && config && !isPublicAuthRequest(config)) {
+      notifySessionExpired('unauthorized');
+    }
+
     return Promise.reject(error);
   }
 );

@@ -2,8 +2,9 @@ import React, { useContext, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../shared/context/AuthContext';
 import { CartContext } from '../context/CartContext';
-import { Menu, X, ShoppingBag, User, LogOut, Bell, ShoppingCart } from 'lucide-react';
+import { Menu, X, ShoppingBag, User, LogOut, Bell, ShoppingCart, KeyRound } from 'lucide-react';
 import api from '../shared/services/api';
+import { isManagerOrAdmin } from './ProtectedRoute';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -60,20 +61,20 @@ const Navbar = () => {
                 <Link to="/dashboard" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                   Dashboard
                 </Link>
-                {(user.role === 'admin' || (user.role === 'employee' && user.employeeType === 'manager')) && (
-                  <Link to="/products" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
-                    Products
-                  </Link>
-                )}
-                {user.role === 'admin' && (
+                {isManagerOrAdmin(user) && (
                   <>
-                    <Link to="/employees" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
-                      Employees
+                    <Link to="/products" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                      Products
                     </Link>
                     <Link to="/subscriptions" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                       Subscriptions
                     </Link>
                   </>
+                )}
+                {user.role === 'admin' && (
+                  <Link to="/employees" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                    Employees
+                  </Link>
                 )}
                 {(user.role === 'admin' || user.role === 'employee') && (
                   <Link to="/store-orders" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
@@ -155,6 +156,13 @@ const Navbar = () => {
                   )}
                 </div>
 
+                <Link
+                  to="/change-password"
+                  className="p-2 rounded-full text-gray-400 hover:text-primary-600 hover:bg-gray-100 transition-colors"
+                  title="Change password"
+                >
+                  <KeyRound className="h-5 w-5" />
+                </Link>
                 <div className="flex items-center space-x-2 text-sm font-medium text-gray-700">
                   <div className="bg-primary-100 p-2 rounded-full text-primary-600">
                     <User className="h-4 w-4" />
@@ -225,20 +233,20 @@ const Navbar = () => {
                 <Link to="/dashboard" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                   Dashboard
                 </Link>
-                {(user.role === 'admin' || (user.role === 'employee' && user.employeeType === 'manager')) && (
-                  <Link to="/products" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
-                    Products
-                  </Link>
-                )}
-                {user.role === 'admin' && (
+                {isManagerOrAdmin(user) && (
                   <>
-                    <Link to="/employees" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
-                      Employees
+                    <Link to="/products" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                      Products
                     </Link>
                     <Link to="/subscriptions" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                       Subscriptions
                     </Link>
                   </>
+                )}
+                {user.role === 'admin' && (
+                  <Link to="/employees" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                    Employees
+                  </Link>
                 )}
                 {(user.role === 'admin' || user.role === 'employee') && (
                   <Link to="/store-orders" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">

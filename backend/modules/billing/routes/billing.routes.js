@@ -19,7 +19,7 @@ router.route('/')
   .post(protect, addOrderItems)
   .get(protect, authorize('admin', 'employee'), getOrders);
 
-router.route('/subscription-checkout').post(protect, authorize('admin'), subscriptionCheckout);
+router.route('/subscription-checkout').post(protect, authorizeManager, subscriptionCheckout);
 
 router.route('/myorders').get(protect, getMyOrders);
 

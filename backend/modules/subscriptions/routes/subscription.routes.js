@@ -7,18 +7,18 @@ import {
   getAllSubscriptions,
   generateDailyOrders
 } from '../controllers/subscription.controller.js';
-import { protect, authorize } from '../../../middleware/authMiddleware.js';
+import { protect, authorizeManager } from '../../../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.route('/')
-  .get(protect, authorize('admin'), getAllSubscriptions);
+  .get(protect, authorizeManager, getAllSubscriptions);
 
 router.route('/active')
-  .get(protect, authorize('admin'), getActiveSubscriptions);
+  .get(protect, authorizeManager, getActiveSubscriptions);
 
 router.route('/generate-orders')
-  .post(protect, authorize('admin'), generateDailyOrders);
+  .post(protect, authorizeManager, generateDailyOrders);
 
 router.route('/my-lists')
   .get(protect, getMySubscriptionLists);

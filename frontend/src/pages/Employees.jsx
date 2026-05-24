@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   RefreshCw,
 } from 'lucide-react';
+import PasswordStrength from '../components/PasswordStrength';
+import { validatePassword } from '../shared/utils/passwordValidation';
 
 const defaultForm = {
   name: '',
@@ -56,6 +58,11 @@ const Employees = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    const validation = validatePassword(formData.password);
+    if (!validation.valid) {
+      showToast('error', validation.message);
+      return;
+    }
     setSubmitting(true);
     try {
       await api.post('/auth/employees', formData);
@@ -112,8 +119,9 @@ const Employees = () => {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    if (!newPassword || newPassword.length < 6) {
-      showToast('error', 'Password must be at least 6 characters');
+    const validation = validatePassword(newPassword);
+    if (!validation.valid) {
+      showToast('error', validation.message);
       return;
     }
     const id = resetTarget._id || resetTarget.id;
@@ -380,13 +388,14 @@ const Employees = () => {
                   <input
                     type="password"
                     required
-                    minLength={6}
+                    minLength={8}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none"
-                    placeholder="Min. 6 characters"
+                    placeholder="Strong password"
                   />
                 </div>
+                <PasswordStrength password={formData.password} />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Position</label>
@@ -448,12 +457,13 @@ const Employees = () => {
                 <input
                   type="password"
                   required
-                  minLength={6}
+                  minLength={8}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-primary-500 outline-none"
-                  placeholder="Min. 6 characters"
+                  placeholder="Strong password"
                 />
+                <PasswordStrength password={newPassword} />
               </div>
               <div className="flex gap-3">
                 <button

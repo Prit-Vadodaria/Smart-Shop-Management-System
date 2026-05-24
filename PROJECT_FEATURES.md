@@ -21,7 +21,7 @@
 
 ### 1.1 Login & Logout
 
-* Secure login (username/email + password)
+* Secure login (email + password)
 * Encrypted password storage
 * Session handling
 * Auto logout after inactivity
@@ -47,7 +47,7 @@
 
 ---
 
-### 1.4 Activity Logs
+### 1.4 Activity Logs(will not be implementede right now)
 
 Track:
 
@@ -64,7 +64,7 @@ Track:
 
 ---
 
-## 🔹 2A. Admin-Side Customer Management
+## 🔹 2A. Admin-Side Customer Management ( NOt TOO be implemented right now)
 
 🎯 Purpose: Manage customer records.
 
@@ -138,7 +138,6 @@ Customer can:
 * View order history
 * Track order status
 * Cancel order (before cut-off time)
-* Reorder previous orders
 
 ---
 
@@ -167,15 +166,6 @@ Integrated with Subscription Engine.
 * Skip specific date
 * Vacation mode
 
----
-
-### 2B.6 Wallet View (Only View & Use)
-
-* View wallet balance
-* Use wallet during payment
-* View wallet transaction history
-
-❌ Pending dues removed as requested.
 
 ---
 

@@ -1,25 +1,35 @@
 import express from 'express';
-import { 
-  register, 
-  login, 
-  getMe, 
+import {
+  register,
+  login,
+  getMe,
   getStaff,
   createEmployee,
   getEmployees,
   resetEmployeePassword,
   updateEmployeeStatus,
-  updateEmployeePosition
+  updateEmployeePosition,
+  getPasswordRules,
+  forgotPassword,
+  resetPassword,
+  changePassword,
+  validatePasswordEndpoint,
 } from '../controllers/auth.controller.js';
 import { protect, authorize, authorizeManager } from '../../../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+router.get('/password-rules', getPasswordRules);
+router.post('/validate-password', validatePasswordEndpoint);
 router.post('/register', register);
 router.post('/login', login);
+router.post('/forgot-password', forgotPassword);
+router.put('/reset-password/:token', resetPassword);
+
 router.get('/me', protect, getMe);
+router.put('/change-password', protect, changePassword);
 router.get('/staff', protect, authorizeManager, getStaff);
 
-// Employee Management routes (Admin Only)
 router.route('/employees')
   .post(protect, authorize('admin'), createEmployee)
   .get(protect, authorize('admin'), getEmployees);
