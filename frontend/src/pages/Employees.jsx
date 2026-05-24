@@ -221,7 +221,7 @@ const Employees = () => {
           {employees.length === 0 ? (
             <div className="p-16 text-center text-slate-400">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-40" />
-              <p className="font-medium">No internal users yet</p>
+              <p className="font-medium">No internal employees yet</p>
               <p className="text-sm mt-1">Create your first employee to get started.</p>
             </div>
           ) : (
