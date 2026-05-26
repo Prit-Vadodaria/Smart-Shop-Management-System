@@ -155,16 +155,8 @@ const Navbar = () => {
                     </button>
                   )}
                 </div>
-
-                <Link
-                  to="/change-password"
-                  className="p-2 rounded-full text-gray-400 hover:text-primary-600 hover:bg-gray-100 transition-colors"
-                  title="Change password"
-                >
-                  <KeyRound className="h-5 w-5" />
-                </Link>
-                <div className="flex items-center space-x-2 text-sm font-medium text-gray-700">
-                  <div className="bg-primary-100 p-2 rounded-full text-primary-600">
+                <Link to="/profile" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors bg-gray-50 hover:bg-primary-50 px-3 py-1.5 rounded-xl">
+                  <div className="bg-primary-100 p-1.5 rounded-full text-primary-600">
                     <User className="h-4 w-4" />
                   </div>
                   <span>
@@ -176,7 +168,7 @@ const Navbar = () => {
                       : user.role}
                     )
                   </span>
-                </div>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="p-2 rounded-full text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors"
@@ -226,10 +218,11 @@ const Navbar = () => {
           <div className="pt-2 pb-3 space-y-1 bg-white">
             {user ? (
               <>
-                <div className="px-4 py-3 border-b border-gray-50">
-                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                <Link to="/profile" className="px-4 py-3 border-b border-gray-50 block hover:bg-gray-50">
+                  <p className="text-sm font-bold text-primary-600 flex items-center gap-2"><User className="h-4 w-4"/> View Profile</p>
+                  <p className="text-sm font-medium text-gray-900 mt-1">{user.name}</p>
                   <p className="text-sm font-medium text-gray-500 truncate">{user.email}</p>
-                </div>
+                </Link>
                 <Link to="/dashboard" className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
                   Dashboard
                 </Link>

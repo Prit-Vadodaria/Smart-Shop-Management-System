@@ -11,6 +11,7 @@ import ChangePassword from './pages/ChangePassword';
 import Dashboard from './pages/Dashboard';
 import Shop from './pages/Shop';
 import Products from './pages/Products';
+import Profile from './pages/Profile';
 
 import { CartProvider } from './context/CartContext';
 import Cart from './pages/Cart';
@@ -37,6 +38,12 @@ function App() {
             <Route path="/change-password" element={
               <ProtectedRoute>
                 <ChangePassword />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } />
 

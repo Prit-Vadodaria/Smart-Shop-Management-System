@@ -47,7 +47,7 @@ A **production-ready MERN-stack retail management system** for a single shop. It
 
 ### Critical Architectural Principles
 - The backend is **vertically sliced by domain module** under `backend/modules/`. Do not create files outside of this structure without explicit justification.
-- The frontend is **in transition** from `pages/` to `features/`. New code should target the `features/` structure per `refactoring_and_migration_plan.md`.
+- The frontend is organized using `pages/` and `components/`.
 - The `User` schema is for **identity only**. Customer-specific data (wallet, addresses, phone) lives in `CustomerProfile`. Do not add customer fields to `User`.
 - The Subscription model enforces **one subscription per type per customer** via a unique index. Do not remove this constraint.
 - The `MonthlyBill` model is **referenced but not yet created**. Do not query `Payment.subscriptionBillId` with `.populate()` until this model exists.
@@ -217,7 +217,7 @@ Never assume:
 ### Where Module Code Exists (Backend)
 ```
 backend/modules/
-  auth/          → User.js, auth.routes.js, auth controller
+  auth/          → User.js, EmployeeProfile.js, auth.routes.js, auth controller
   billing/       → Order.js, Payment.js, billing.routes.js, payment.routes.js
   customers/     → CustomerProfile.js, customer.routes.js
   products/      → Product.js, product.routes.js
@@ -235,6 +235,7 @@ frontend/src/
   components/Navbar.jsx      → Navigation (role-aware)
   components/ProtectedRoute  → Route guard logic (roles[], requireManager)
   components/SubscriptionModal → Subscription creation modal
+  components/profile/        → Profile management sub-components
   context/CartContext.jsx    → Cart state management
   shared/services/api.js     → Axios base instance + token interceptor
 ```
@@ -289,7 +290,7 @@ frontend/src/
 ## CONTEXT RETENTION STRATEGY
 
 ### Information That Must Never Be Lost
-- The current migration phase (backend is partially in vertical-slice; frontend still in `pages/`)
+- The application architecture (backend in vertical-slice modules; frontend structured in `pages/` and `components/`)
 - The `MonthlyBill` model does not exist yet — do not populate `Payment.subscriptionBillId`
 - Product categories are hardcoded: `['Groceries', 'Dairy', 'Bakery']`
 - There is a unique index on `Subscription { customer, type }` — enforces one subscription per type
@@ -423,8 +424,7 @@ When asked about project status or progress:
 **Step 1: Read these files in this exact order**
 1. `project-context.md` — full project knowledge base (read completely)
 2. `agent.md` — this file (read completely)
-3. `refactoring_and_migration_plan.md` — understand the ongoing migration arc
-4. `backend/server.js` — understand route mounting and app bootstrap
+3. `backend/server.js` — understand route mounting and app bootstrap
 5. `backend/modules/[relevant module]/` — read model, controller, routes for your task area
 6. `frontend/src/App.jsx` — understand routing and role guards
 
@@ -474,7 +474,7 @@ Run through this checklist at the start of every working session:
 ```
 [ ] Read project-context.md completely (or confirm I have read it in a recent session)
 [ ] Read agent.md completely (or confirm I have read it in a recent session)
-[ ] Identify the current migration phase from project-context.md → Current Project Status
+[ ] Check project-context.md → Current Project Status
 [ ] Confirm the active task(s) for this session with the user
 [ ] Read all relevant existing code files for the task area before writing any code
 [ ] Verify: Does the task require a schema change? If yes, assess backward compatibility

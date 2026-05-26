@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import EmployeeProfile from '../models/EmployeeProfile.js';
 import { assertValidPassword, PASSWORD_RULES, validatePassword } from '../../../utils/passwordValidation.js';
 import { buildResetPasswordUrl, sendPasswordResetEmail } from '../../../utils/passwordResetEmail.js';
 
@@ -194,6 +195,12 @@ export const createEmployee = async (req, res, next) => {
       role: 'employee',
       employeeType,
       isActive: true,
+    });
+
+    await EmployeeProfile.create({
+      user: user._id,
+      phone: '',
+      operationalRole: employeeType === 'manager' ? 'Store Manager' : 'Sales Staff',
     });
 
     res.status(201).json({
@@ -456,4 +463,97 @@ export const validatePasswordEndpoint = (req, res) => {
   const { password } = req.body;
   const result = validatePassword(password);
   res.status(200).json({ success: true, ...result });
+};
+
+// @desc    Get employee profile
+// @route   GET /api/auth/profile
+// @access  Private (Employee/Admin)
+export const getEmployeeProfile = async (req, res, next) => {
+  try {
+    const profile = await EmployeeProfile.findOne({ user: req.user._id }).populate('user', 'name email role employeeType');
+    
+    if (profile) {
+      res.json({ success: true, data: profile });
+    } else {
+      res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update employee profile
+// @route   PUT /api/auth/profile
+// @access  Private (Employee/Admin)
+export const updateEmployeeProfile = async (req, res, next) => {
+  try {
+    const { name, phone } = req.body;
+    
+    // Update User
+    const user = await User.findById(req.user._id);
+    if (user && name) {
+      user.name = name;
+      await user.save();
+    }
+
+    // Update Profile
+    let profile = await EmployeeProfile.findOne({ user: req.user._id });
+    if (profile) {
+      if (phone) profile.phone = phone;
+      await profile.save();
+    } else {
+      profile = await EmployeeProfile.create({ user: req.user._id, phone });
+    }
+
+    res.json({ success: true, data: profile });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update employee email
+// @route   PUT /api/auth/employees/:id/email
+// @access  Private/Admin
+export const updateEmployeeEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const employee = await User.findById(req.params.id);
+    
+    if (!employee || employee.role !== 'employee') {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+
+    const userExists = await User.findOne({ email });
+    if (userExists && userExists._id.toString() !== employee._id.toString()) {
+      return res.status(400).json({ success: false, message: 'Email already in use' });
+    }
+
+    employee.email = email;
+    await employee.save();
+    res.json({ success: true, message: 'Employee email updated', data: employee });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update employee role/type
+// @route   PUT /api/auth/employees/:id/role
+// @access  Private/Admin
+export const updateEmployeeRole = async (req, res, next) => {
+  try {
+    const { role, employeeType } = req.body;
+    const employee = await User.findById(req.params.id);
+    
+    if (!employee) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+
+    if (role) employee.role = role;
+    if (employeeType) employee.employeeType = employeeType;
+
+    await employee.save();
+    res.json({ success: true, message: 'Employee role updated', data: employee });
+  } catch (error) {
+    next(error);
+  }
 };

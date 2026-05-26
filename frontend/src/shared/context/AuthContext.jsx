@@ -30,6 +30,16 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [sessionMessage, setSessionMessage] = useState(null);
 
+  // Helper to update user state safely
+  const updateUser = (updater) => {
+    setUser(prev => {
+      if (typeof updater === 'function') {
+        return updater(prev);
+      }
+      return { ...prev, ...updater };
+    });
+  };
+
   const logout = useCallback((options = {}) => {
     clearSession();
     clearSessionActivity();
@@ -149,6 +159,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         register,
+        updateUser,
       }}
     >
       {children}

@@ -2,11 +2,14 @@ import mongoose from 'mongoose';
 
 const AddressSchema = new mongoose.Schema({
   tag: { type: String, enum: ['Home', 'Office', 'Other'], default: 'Home' },
+  fullName: { type: String },
+  phoneNumber: { type: String },
   addressLine1: { type: String, required: true },
   addressLine2: { type: String },
   city: { type: String, required: true },
   state: { type: String, required: true },
   pincode: { type: String, required: true },
+  landmark: { type: String },
   isDefaultDelivery: { type: Boolean, default: false }
 });
 
@@ -25,7 +28,7 @@ const CustomerProfileSchema = new mongoose.Schema({
   phone: {
     type: String,
     required: true,
-    match: [/^\d{10}$/, 'Please add a valid 10-digit phone number']
+    match: [/^(?:\d{10}|Not provided)$/, 'Please add a valid 10-digit phone number or "Not provided"']
   },
   addresses: [AddressSchema],
   walletBalance: {
@@ -35,6 +38,10 @@ const CustomerProfileSchema = new mongoose.Schema({
   totalAmountSpent: {
     type: Number,
     default: 0
+  },
+  preferences: {
+    type: Object,
+    default: {}
   }
 }, {
   timestamps: true

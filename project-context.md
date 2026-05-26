@@ -2,7 +2,7 @@
 # Smart Shop Management System — Complete Project Knowledge Base
 
 > **Last Updated:** 2026-05-24
-> **Version:** 1.0.0 (Active MVC → Vertical-Slice Refactor In Progress)
+> **Version:** 1.0.0
 > **Purpose:** This document is the single source of truth for every AI agent, engineer, or contributor onboarding to this project. Read this file completely before touching any code.
 
 ---
@@ -82,7 +82,7 @@ Small and mid-sized retail shops currently operate across fragmented tools: manu
 - **Email**: Nodemailer SMTP (configured but not yet fully wired in notifications module)
 
 ### Module Architecture (Backend — Vertical Slice)
-The backend has already been partially migrated from a flat MVC layout to a **vertical feature-slice structure** under `backend/modules/`. Each module owns its `models/`, `controllers/`, and `routes/`.
+The backend uses a **vertical feature-slice structure** under `backend/modules/`. Each module owns its `models/`, `controllers/`, and `routes/`.
 
 ```
 backend/modules/
@@ -189,9 +189,7 @@ Daily cron trigger (scheduled or manual via POST /api/subscriptions/trigger-sche
 Smart-Shop-Management-System/
   ├── backend/                   # Node.js Express REST API
   ├── frontend/                  # React + Vite SPA
-  ├── README.md                  # Quick-start guide
   ├── PROJECT_FEATURES.md        # Full business feature specification
-  └── refactoring_and_migration_plan.md  # Architectural migration document
 ```
 
 ### Backend (`backend/`)
@@ -205,8 +203,10 @@ backend/
   │   └── uploadMiddleware.js    # Multer config for product image uploads
   ├── modules/                   # ← VERTICAL FEATURE SLICES (migration target)
   │   ├── auth/
-  │   │   ├── controllers/       # auth.controller.js (login, register, me)
-  │   │   ├── models/User.js     # User schema (role, employeeType, isActive)
+  │   │   ├── controllers/       # auth.controller.js (login, register, me, employee tracking)
+  │   │   ├── models/
+  │   │   │   ├── User.js        # User schema (role, employeeType, isActive)
+  │   │   │   └── EmployeeProfile.js # Employee info (phone, operationalRole, dashboardPreferences)
   │   │   └── routes/auth.routes.js
   │   ├── customers/
   │   │   ├── controllers/       # customer.controller.js
@@ -264,21 +264,26 @@ frontend/src/
   │   └── SubscriptionModal.jsx  # Subscription creation/edit modal
   ├── context/
   │   └── CartContext.jsx        # Shopping cart state (items, add/remove/clear)
-  ├── pages/                     # All page-level components (to be migrated to features/)
+  ├── pages/                     # All page-level components
   │   ├── Login.jsx
   │   ├── Register.jsx
   │   ├── Dashboard.jsx          # Admin/Manager metrics dashboard
   │   ├── Shop.jsx               # Customer product browsing grid
   │   ├── Products.jsx           # Admin/Manager product CRUD
   │   ├── Cart.jsx               # Customer shopping cart
-  │   ├── Checkout.jsx           # Order placement & payment selection
+  │   ├── Checkout.jsx           # Order placement & payment selection (integrated with Address Book)
   │   ├── MyOrders.jsx           # Customer order history
   │   ├── StoreOrders.jsx        # Admin/Staff order management + POS
   │   ├── MySubscriptions.jsx    # Customer subscription management
   │   ├── AdminSubscriptions.jsx # Admin subscription overview
-  │   └── Employees.jsx          # Admin employee management
+  │   ├── ForgotPassword.jsx     # Password recovery flow
+  │   ├── ResetPassword.jsx      # Password reset flow
+  │   ├── ChangePassword.jsx     # Change password from profile
+  │   ├── Employees.jsx          # Admin employee management
+  │   └── Profile.jsx            # Unified Profile management page (roles: Admin, Manager, Staff, Customer)
   └── shared/
-      ├── context/               # (Planned: AuthContext.jsx)
+      ├── context/
+      │   └── AuthContext.jsx    # Session & password state management
       ├── services/
       │   └── api.js             # Axios base instance (token interceptor via localStorage)
       └── utils/                 # (Planned: formatters.js)
@@ -421,8 +426,13 @@ employeeType (manager|staff — employees only), isActive, createdAt
 #### `CustomerProfile` (customers module)
 ```
 _id, user (ref:User, unique), customerId (unique string), phone (10-digit),
-addresses[]: { tag, addressLine1, addressLine2, city, state, pincode, isDefaultDelivery },
-walletBalance, totalAmountSpent, timestamps
+addresses[]: { tag, fullName, phoneNumber, addressLine1, addressLine2, city, state, pincode, landmark, isPrimary, isDefaultDelivery },
+walletBalance, totalAmountSpent, preferences: {}, timestamps
+```
+
+#### `EmployeeProfile` (auth module)
+```
+_id, user (ref:User, unique), phone, operationalRole, dashboardPreferences: {}, assignedTasks: [], timestamps
 ```
 
 #### `Product` (products module)
@@ -520,7 +530,15 @@ CustomerProfileSchema.index({ user: 1 }); // frequent auth lookups
 |---|---|---|---|
 | POST | `/api/auth/register` | Public | Register new user (customer) |
 | POST | `/api/auth/login` | Public | Login, returns JWT |
+| POST | `/api/auth/forgot-password` | Public | Request password reset token |
+| PUT | `/api/auth/reset-password/:token` | Public | Reset password with token |
+| PUT | `/api/auth/change-password` | protect | Change password for logged-in user |
+| GET/PUT | `/api/auth/profile` | protect | Get/Update Employee Profile |
+| PUT | `/api/auth/employees/:id/role` | protect(admin) | Update employee role |
 | GET | `/api/auth/me` | protect | Get current user |
+| GET/PUT | `/api/customers/profile` | protect | Get/Update Customer Profile |
+| POST | `/api/customers/address` | protect | Add Customer Address |
+| PUT/DEL | `/api/customers/address/:addressId` | protect | Update/Delete Address |
 | GET | `/api/products` | protect | List all active products |
 | POST | `/api/products` | protect + authorizeManager | Create product (with image upload) |
 | PUT | `/api/products/:id` | protect + authorizeManager | Update product |
@@ -620,6 +638,9 @@ On first server start against a fresh database, `bootstrapAdmin.js` automaticall
 
 ### Completed Features
 - [x] JWT authentication with 4-tier RBAC (admin / employee[manager|staff] / customer)
+- [x] Password strength validation, reset flows, and session management with idle timeout
+- [x] AuthContext for managing user sessions and UI states
+- [x] Comprehensive Profile Management system (Customer Address Book, Employee Profiles, Role-based Dashboards)
 - [x] Backend modular architecture (all 8 modules created under `backend/modules/`)
 - [x] Custom error hierarchy (`AppError`, `BadRequestError`, `NotFoundError`, etc.)
 - [x] Global error handler with Mongoose/JWT error mapping
@@ -633,12 +654,11 @@ On first server start against a fresh database, `bootstrapAdmin.js` automaticall
 - [x] Payment model with split payment support (Cash + UPI)
 - [x] Frontend routing with ProtectedRoute (role + manager guards)
 - [x] CartContext for shopping cart state
-- [x] All major pages: Login, Register, Dashboard, Shop, Products, Cart, Checkout, MyOrders, StoreOrders, MySubscriptions, AdminSubscriptions, Employees
+- [x] All major pages: Login, Register, Dashboard, Shop, Products, Cart, Checkout, MyOrders, StoreOrders, MySubscriptions, AdminSubscriptions, Employees, ForgotPassword, ResetPassword
 - [x] Navbar with role-aware navigation and cart badge
 - [x] Axios base instance with token interceptor
 
 ### In-Progress Features
-- [ ] Frontend vertical-slice migration (pages → features/ directory structure per `refactoring_and_migration_plan.md`)
 - [ ] Services layer (`*.service.js`) not yet implemented inside modules — business logic sits in controllers
 - [ ] Delivery management module (routes and controllers exist in plan but not verified implemented)
 - [ ] Monthly billing / consolidated invoice for subscriptions (`MonthlyBill` model missing)
@@ -752,8 +772,6 @@ On first server start against a fresh database, `bootstrapAdmin.js` automaticall
 ### Priority 2 — Architecture Completions
 - Create missing models: `MonthlyBill`, `PurchaseOrder`, `DeliveryRun`, `Category`, `Notification`, `Settings`
 - Extract business logic from controllers into dedicated `*.service.js` files per module
-- Complete frontend features/ migration per `refactoring_and_migration_plan.md`
-- Add `AuthContext` to `frontend/src/shared/context/` (currently missing — auth data likely lives in localStorage without a React context)
 
 ### Priority 3 — Infrastructure
 - Migrate image uploads from local disk to Cloudinary or AWS S3
