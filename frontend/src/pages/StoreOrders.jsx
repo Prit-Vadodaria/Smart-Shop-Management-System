@@ -31,6 +31,11 @@ const StoreOrders = () => {
       (user.role === 'employee' && user.employeeType === 'manager');
     const canUsePOS = user.role === 'admin' || user.role === 'employee';
 
+    // Derived POS Totals (Item-level dynamic tax summation)
+    const posSubtotal = posCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const posTax = posCart.reduce((acc, item) => acc + (item.price * item.quantity) * ((item.taxPercentage || 0) / 100), 0);
+    const posTotal = posSubtotal + posTax;
+
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
@@ -117,7 +122,8 @@ const StoreOrders = () => {
                 name: product.name,
                 price: product.price,
                 quantity: 1,
-                image: product.image
+                image: product.image,
+                taxPercentage: product.taxPercentage || 0
             }]);
         }
         setProductSearch('');
@@ -138,20 +144,16 @@ const StoreOrders = () => {
 
         setIsSubmitting(true);
         try {
-            const itemsPrice = posCart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-            const taxPrice = itemsPrice * 0.18; // 18% GST example
-            const totalPrice = itemsPrice + taxPrice;
-
             const orderData = {
                 orderItems: posCart,
                 customerId: posCustomer.isGuest ? null : (posCustomer.user?._id || posCustomer._id),
                 customerName: posCustomer.isGuest ? posCustomer.user.name : null,
                 paymentMethod: paymentMode,
                 orderType: 'Takeaway',
-                itemsPrice,
-                taxPrice,
+                itemsPrice: posSubtotal,
+                taxPrice: posTax,
                 shippingPrice: 0,
-                totalPrice,
+                totalPrice: posTotal,
                 isPaid: true,
                 isDelivered: true,
                 shippingAddress: { // Added for validation compatibility
@@ -170,7 +172,7 @@ const StoreOrders = () => {
             // Show a professional receipt-style success message
             const orderId = data._id.toString().substring(data._id.toString().length - 8).toUpperCase();
             const customerNameDisplay = posCustomer.isGuest ? posCustomer.user.name : (posCustomer.user?.name || posCustomer.name);
-            alert(`✅ Sale Completed Successfully!\nOrder ID: ORD-${orderId}\nCustomer: ${customerNameDisplay}\nTotal: ₹${totalPrice.toFixed(2)}`);
+            alert(`✅ Sale Completed Successfully!\nOrder ID: ORD-${orderId}\nCustomer: ${customerNameDisplay}\nTotal: ₹${posTotal.toFixed(2)}`);
 
             // Reset POS
             setIsPOSOpen(false);
@@ -606,7 +608,10 @@ const StoreOrders = () => {
                                             <div key={item.product} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-bold text-gray-800 truncate">{item.name}</p>
-                                                    <p className="text-xs text-primary-600 font-bold">₹{item.price}</p>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className="text-xs text-primary-600 font-bold">₹{item.price}</span>
+                                                        <span className="text-[10px] bg-gray-100 text-gray-500 font-bold px-1.5 py-0.5 rounded">GST {item.taxPercentage || 0}%</span>
+                                                    </div>
                                                 </div>
                                                 <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-1 border border-gray-100">
                                                     <button
@@ -654,16 +659,16 @@ const StoreOrders = () => {
                                 <div className="space-y-3 bg-white p-6 rounded-3xl border border-gray-100 shadow-lg mt-auto">
                                     <div className="flex justify-between text-xs font-bold text-gray-400">
                                         <span>Subtotal</span>
-                                        <span>₹{posCart.reduce((acc, i) => acc + (i.price * i.quantity), 0).toFixed(2)}</span>
+                                        <span>₹{posSubtotal.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between text-xs font-bold text-gray-400">
-                                        <span>Tax (18% GST)</span>
-                                        <span>₹{(posCart.reduce((acc, i) => acc + (i.price * i.quantity), 0) * 0.18).toFixed(2)}</span>
+                                        <span>Dynamic Tax / GST</span>
+                                        <span>₹{posTax.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-3 border-t border-gray-50">
                                         <span className="text-lg font-black text-gray-900">Total</span>
                                         <span className="text-2xl font-black text-primary-600">
-                                            ₹{(posCart.reduce((acc, i) => acc + (i.price * i.quantity), 0) * 1.18).toFixed(2)}
+                                            ₹{posTotal.toFixed(2)}
                                         </span>
                                     </div>
                                     <button

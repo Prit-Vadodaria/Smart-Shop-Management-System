@@ -1,14 +1,18 @@
 import express from 'express';
 import {
   processPayment,
-  getPayments
+  getPayments,
+  getPaymentSummary
 } from '../controllers/payment.controller.js';
-import { protect, authorize } from '../../../middleware/authMiddleware.js';
+import { protect, authorizeManager } from '../../../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+router.route('/summary')
+  .get(protect, authorizeManager, getPaymentSummary);
+
 router.route('/')
-  .get(protect, authorize('admin'), getPayments)
+  .get(protect, authorizeManager, getPayments)
   .post(protect, processPayment);
 
 export default router;
