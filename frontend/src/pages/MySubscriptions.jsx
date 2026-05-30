@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../shared/services/api';
 import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 import { Calendar, Play, Pause, Trash2, Plus, Search, Info, CheckCircle, ChevronRight, Settings, AlertTriangle } from 'lucide-react';
@@ -9,7 +10,9 @@ const MySubscriptions = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState('Daily');
+    const location = useLocation();
+    const initialTab = location.state?.tab || 'Daily';
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [customAlert, setCustomAlert] = useState('');
 
     const fetchSubscriptionData = async () => {
@@ -240,14 +243,14 @@ const MySubscriptions = () => {
                                                 <button
                                                     onClick={() => {
                                                         if (isListEmpty) {
-                                                            setCustomAlert("Please add an Item to Start/Resume the list.");
+                                                            setCustomAlert("Please add an Item to Start the list.");
                                                             return;
                                                         }
                                                         updateListSettings(currentList._id, { status: 'Active' });
                                                     }}
                                                     className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold transition-colors"
                                                 >
-                                                    <Play className="h-3.5 w-3.5" /> {isListEmpty ? 'Start List' : 'Resume List'}
+                                                    <Play className="h-3.5 w-3.5" /> {currentList.status === 'Paused' && !isListEmpty ? 'Resume List' : 'Start List'}
                                                 </button>
                                             );
                                         }

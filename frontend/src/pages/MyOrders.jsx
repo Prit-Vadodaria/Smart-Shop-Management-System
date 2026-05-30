@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Truck, Store, Clock, CalendarDays, ExternalLink, ChevronRight, CheckCircle, MapPin, X } from 'lucide-react';
+import { Package, Truck, Store, Clock, CalendarDays, ExternalLink, ChevronRight, CheckCircle, MapPin, X, AlertTriangle } from 'lucide-react';
 import api from '../shared/services/api';
 import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 
@@ -9,6 +9,8 @@ const MyOrders = () => {
     const [error, setError] = useState(null);
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedDate, setSelectedDate] = useState('');
+    const [customAlert, setCustomAlert] = useState('');
+    const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
     const fetchOrders = async () => {
         try {
@@ -28,17 +30,23 @@ const MyOrders = () => {
         }, 0);
     }, []);
 
-    const handleCancel = async (orderId) => {
-        if (!window.confirm('Are you sure you want to cancel this order?')) return;
-
-        try {
-            await api.put(`/orders/${orderId}/cancel`);
-            fetchOrders();
-            alert('Order cancelled successfully.');
-        } catch (err) {
-            console.error('Error cancelling order:', err);
-            alert(err.response?.data?.message || 'Failed to cancel order.');
-        }
+    const handleCancel = (orderId) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: 'Cancel Order',
+            message: 'Are you sure you want to cancel this order? This action cannot be undone.',
+            onConfirm: async () => {
+                setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null });
+                try {
+                    await api.put(`/orders/${orderId}/cancel`);
+                    fetchOrders();
+                    setCustomAlert('Order cancelled successfully.');
+                } catch (err) {
+                    console.error('Error cancelling order:', err);
+                    setCustomAlert(err.response?.data?.message || 'Failed to cancel order.');
+                }
+            }
+        });
     };
 
     const filteredOrders = orders.filter((order) => {
@@ -254,6 +262,52 @@ const MyOrders = () => {
                         </div>
                     )}
                 </>
+            )}
+
+            {/* Custom Alert Modal */}
+            {customAlert && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-xl max-w-sm w-full p-6 text-center animate-in zoom-in-95 duration-200">
+                        <div className="w-16 h-16 bg-yellow-50 text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <AlertTriangle className="h-8 w-8" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Notice</h3>
+                        <p className="text-gray-500 font-medium mb-6">{customAlert}</p>
+                        <button
+                            onClick={() => setCustomAlert('')}
+                            className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-xl transition-colors"
+                        >
+                            Okay
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Confirm Modal */}
+            {confirmDialog.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-xl max-w-sm w-full p-6 text-center animate-in zoom-in-95 duration-200">
+                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <AlertTriangle className="h-8 w-8" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{confirmDialog.title}</h3>
+                        <p className="text-gray-500 font-medium mb-6">{confirmDialog.message}</p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null })}
+                                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-colors"
+                            >
+                                No, Keep it
+                            </button>
+                            <button
+                                onClick={confirmDialog.onConfirm}
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-colors"
+                            >
+                                Yes, Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
