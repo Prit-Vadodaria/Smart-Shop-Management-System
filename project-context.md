@@ -657,6 +657,7 @@ On first server start against a fresh database, `bootstrapAdmin.js` automaticall
 - [x] All major pages: Login, Register, Dashboard, Shop, Products, Cart, Checkout, MyOrders, StoreOrders, MySubscriptions, AdminSubscriptions, Employees, ForgotPassword, ResetPassword
 - [x] Navbar with role-aware navigation and cart badge
 - [x] Axios base instance with token interceptor
+- [x] Shop page improvements: stock indicator badges, functional sort dropdown, results count summary, inline quantity selector, tax/unit display, and cart addition feedback toasts
 
 ### In-Progress Features
 - [ ] Services layer (`*.service.js`) not yet implemented inside modules — business logic sits in controllers
