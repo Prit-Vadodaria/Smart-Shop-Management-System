@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { AuthContext } from '../shared/context/AuthContext';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -9,12 +9,12 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [localError, setLocalError] = useState('');
 
-  const { login, error, sessionMessage, clearSessionMessage } = useContext(AuthContext);
+  const { login, error, sessionMessage, sessionMessageType, clearSessionMessage } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = location.state?.from?.pathname || '/dashboard';
-  const displayError = localError || error || sessionMessage;
+  const displayError = localError || error || (sessionMessageType === 'error' ? sessionMessage : null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,12 +38,17 @@ const Login = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-100">
-          {displayError && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md flex items-center">
-              <AlertCircle className="h-5 w-5 mr-2" />
+          {sessionMessage && sessionMessageType === 'success' ? (
+            <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md flex items-center text-sm">
+              <CheckCircle2 className="h-5 w-5 mr-2 shrink-0" />
+              <span>{sessionMessage}</span>
+            </div>
+          ) : displayError ? (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md flex items-center text-sm">
+              <AlertCircle className="h-5 w-5 mr-2 shrink-0" />
               <span>{displayError}</span>
             </div>
-          )}
+          ) : null}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>

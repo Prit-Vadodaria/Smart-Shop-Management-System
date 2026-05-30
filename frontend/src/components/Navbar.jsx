@@ -1,5 +1,5 @@
-import React, { useContext, useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useContext, useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../shared/context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import { Menu, X, ShoppingBag, User, LogOut, Bell, ShoppingCart, KeyRound } from 'lucide-react';
@@ -10,9 +10,11 @@ const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const { cartTotalCount } = useContext(CartContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
 
   useEffect(() => {
     if (user) {
@@ -29,6 +31,27 @@ const Navbar = () => {
       return () => clearInterval(interval);
     }
   }, [user]);
+
+  // Close notifications and mobile menu on page navigation
+  useEffect(() => {
+    setShowNotifications(false);
+    setIsOpen(false);
+  }, [location]);
+
+  // Close notifications on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotifications]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -102,7 +125,7 @@ const Navbar = () => {
               <div className="flex items-center space-x-4">
                 {/* Notification & Cart Icons */}
                 <div className="flex items-center space-x-4 pr-4 border-r border-gray-200">
-                  <div className="relative">
+                  <div className="relative" ref={notificationRef}>
                     <button
                       onClick={() => setShowNotifications(!showNotifications)}
                       className="relative p-1 rounded-full text-gray-400 hover:text-primary-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"

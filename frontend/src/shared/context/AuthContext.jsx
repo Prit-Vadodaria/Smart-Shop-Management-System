@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sessionMessage, setSessionMessage] = useState(null);
+  const [sessionMessageType, setSessionMessageType] = useState('error');
 
   // Helper to update user state safely
   const updateUser = (updater) => {
@@ -46,8 +47,13 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     if (options.reason === 'inactivity') {
       setSessionMessage('You were signed out due to inactivity. Please sign in again.');
+      setSessionMessageType('error');
     } else if (options.expired || options.reason === 'expired' || options.reason === 'unauthorized') {
       setSessionMessage('Your session has expired. Please sign in again.');
+      setSessionMessageType('error');
+    } else if (options.reason === 'password_changed') {
+      setSessionMessage('Password changed, please login again.');
+      setSessionMessageType('success');
     }
   }, []);
 
@@ -62,6 +68,7 @@ export const AuthProvider = ({ children }) => {
 
   const clearSessionMessage = useCallback(() => {
     setSessionMessage(null);
+    setSessionMessageType('error');
   }, []);
 
   const restoreSession = useCallback(async () => {
@@ -74,6 +81,7 @@ export const AuthProvider = ({ children }) => {
     if (isTokenExpired(stored.token)) {
       clearSession();
       setSessionMessage('Your session has expired. Please sign in again.');
+      setSessionMessageType('error');
       setLoading(false);
       return;
     }
@@ -90,6 +98,7 @@ export const AuthProvider = ({ children }) => {
     } catch {
       clearSession();
       setSessionMessage('Your session has expired. Please sign in again.');
+      setSessionMessageType('error');
     } finally {
       setLoading(false);
     }
@@ -108,6 +117,7 @@ export const AuthProvider = ({ children }) => {
       if (event.newValue === null && user) {
         setUser(null);
         setSessionMessage('Your session has expired. Please sign in again.');
+        setSessionMessageType('error');
       }
     };
     window.addEventListener('storage', onStorage);
@@ -155,6 +165,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         error,
         sessionMessage,
+        sessionMessageType,
         clearSessionMessage,
         login,
         logout,

@@ -35,7 +35,9 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const config = error.config;
 
-    if (status === 401 && config && !isPublicAuthRequest(config)) {
+    const isChangePassword = config?.url && /\/auth\/change-password(\/|$)/.test(config.url);
+
+    if (status === 401 && config && !isPublicAuthRequest(config) && !isChangePassword) {
       notifySessionExpired('unauthorized');
     }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Truck, Store, Clock, CalendarDays, ExternalLink, ChevronRight, CheckCircle, MapPin } from 'lucide-react';
+import { Package, Truck, Store, Clock, CalendarDays, ExternalLink, ChevronRight, CheckCircle, MapPin, X } from 'lucide-react';
 import api from '../shared/services/api';
 import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 
@@ -7,6 +7,8 @@ const MyOrders = () => {
     const [orders, setOrders] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [selectedDate, setSelectedDate] = useState('');
 
     const fetchOrders = async () => {
         try {
@@ -38,6 +40,21 @@ const MyOrders = () => {
             alert(err.response?.data?.message || 'Failed to cancel order.');
         }
     };
+
+    const filteredOrders = orders.filter((order) => {
+        if (statusFilter !== 'all' && order.status !== statusFilter) {
+            return false;
+        }
+
+        if (selectedDate) {
+            const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
+            if (orderDate !== selectedDate) {
+                return false;
+            }
+        }
+
+        return true;
+    });
 
     if (isLoading) {
         return (
@@ -79,8 +96,66 @@ const MyOrders = () => {
                     </a>
                 </div>
             ) : (
-                <div className="space-y-6">
-                    {orders.map((order) => (
+                <>
+                    {/* Dropdown Filters */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-8 flex flex-wrap gap-4 items-end justify-between">
+                        <div className="flex flex-wrap gap-4 items-center w-full sm:w-auto">
+                            <div className="flex flex-col gap-1 w-full sm:w-48">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Status</label>
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer hover:bg-gray-100/50 transition-colors"
+                                >
+                                    <option value="all">All Statuses</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Packed">Packed</option>
+                                    <option value="Dispatched">Dispatched</option>
+                                    <option value="Out for delivery">Out for delivery</option>
+                                    <option value="Delivered">Delivered</option>
+                                    <option value="Picked Up">Picked Up</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+
+                            <div className="flex flex-col gap-1 w-full sm:w-48">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Date</label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="date"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer hover:bg-gray-100/50 transition-colors"
+                                    />
+
+                                    {selectedDate && (
+                                        <button
+                                            onClick={() => setSelectedDate('')}
+                                            className="p-1 rounded-full hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 w-full sm:w-auto text-center sm:text-left">
+                            Showing <span className="text-primary-600 font-black text-sm">{filteredOrders.length}</span> {filteredOrders.length === 1 ? 'order' : 'orders'}
+                        </div>
+                    </div>
+
+                    {filteredOrders.length === 0 ? (
+                        <div className="bg-white rounded-3xl shadow-sm p-16 text-center border border-gray-100 mt-6">
+                            <div className="bg-gray-50 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Package className="h-8 w-8 text-gray-300" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-1">No matching orders</h3>
+                            <p className="text-gray-500 text-sm">Adjust your filters to see more orders.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            {filteredOrders.map((order) => (
                         <div key={order._id} className="bg-white rounded-3xl overflow-hidden shadow-md border border-gray-100 hover:shadow-lg transition-all group">
                             <div className="bg-gray-50/80 px-6 py-5 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
                                 <div className="space-y-1">
@@ -176,8 +251,10 @@ const MyOrders = () => {
                                 )}
                             </div>
                         </div>
-                    ))}
-                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
