@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AuthContext } from '../shared/context/AuthContext';
 import { Package, Truck, Store, MapPin, CheckCircle, Clock, Search, Filter, Trash2, Plus, ShoppingCart, User as UserIcon, X, CreditCard } from 'lucide-react';
 import api from '../shared/services/api';
 
 const StoreOrders = () => {
     const { user } = useContext(AuthContext);
+    const location = useLocation();
     const [orders, setOrders] = useState([]);
     const [staffList, setStaffList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('active'); // active, completed, cancelled
+    const [activeTab, setActiveTab] = useState(new URLSearchParams(location.search).get('tab') || 'active'); // active, completed, cancelled
 
     // POS State
     const [isPOSOpen, setIsPOSOpen] = useState(false);

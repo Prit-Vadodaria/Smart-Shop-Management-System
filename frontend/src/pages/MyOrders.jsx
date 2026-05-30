@@ -30,7 +30,7 @@ const MyOrders = () => {
 
     const handleCancel = async (orderId) => {
         if (!window.confirm('Are you sure you want to cancel this order?')) return;
-        
+
         try {
             await api.put(`/orders/${orderId}/cancel`);
             fetchOrders();
@@ -107,7 +107,7 @@ const MyOrders = () => {
                                     onChange={(e) => setStatusFilter(e.target.value)}
                                     className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer hover:bg-gray-100/50 transition-colors"
                                 >
-                                    <option value="all">All Statuses</option>
+                                    <option value="all">All Status</option>
                                     <option value="Pending">Pending</option>
                                     <option value="Packed">Packed</option>
                                     <option value="Dispatched">Dispatched</option>
@@ -156,101 +156,100 @@ const MyOrders = () => {
                     ) : (
                         <div className="space-y-6">
                             {filteredOrders.map((order) => (
-                        <div key={order._id} className="bg-white rounded-3xl overflow-hidden shadow-md border border-gray-100 hover:shadow-lg transition-all group">
-                            <div className="bg-gray-50/80 px-6 py-5 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-black text-gray-400 tracking-widest uppercase">Order ID</span>
-                                        <span className="text-sm font-bold text-gray-700 font-mono bg-white px-2 py-0.5 rounded border border-gray-200">#{order._id.substring(order._id.length - 8).toUpperCase()}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
-                                        <CalendarDays className="h-4 w-4" />
-                                        {new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                                    </div>
-                                </div>
-                                
-                                <div className="flex flex-col items-end gap-2">
-                                    <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 ${
-                                        order.status === 'Delivered' || order.status === 'Picked Up' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                        order.status === 'Cancelled' ? 'bg-red-100 text-red-700 border border-red-200' :
-                                        order.status === 'Out for delivery' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                                        'bg-yellow-100 text-yellow-700 border border-yellow-200'
-                                    }`}>
-                                        {order.status === 'Delivered' || order.status === 'Picked Up' ? <CheckCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                                        {order.status}
-                                    </span>
-                                    <div className="text-xl font-black text-gray-900 tracking-tight">
-                                        ₹{order.totalPrice.toFixed(2)}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="p-6">
-                                <div className="flex items-center gap-3 mb-6 bg-blue-50/50 p-3 rounded-xl border border-blue-100/50 w-max">
-                                    {order.orderType === 'Home Delivery' ? (
-                                        <>
-                                            <Truck className="h-5 w-5 text-blue-600" />
-                                            <span className="font-bold text-blue-800 text-sm">Home Delivery</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Store className="h-5 w-5 text-purple-600" />
-                                            <span className="font-bold text-purple-800 text-sm">Take Away</span>
-                                        </>
-                                    )}
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                                    <div className="space-y-4">
-                                        <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest border-b border-gray-100 pb-2">Items</h4>
-                                        <div className="space-y-3">
-                                            {order.orderItems.map((item, idx) => (
-                                                <div key={idx} className="flex items-center gap-3">
-                                                    <div className="h-12 w-12 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200">
-                                                        {hasProductImage(item.image) ? (
-                                                            <img src={getProductImageUrl(item.image)} alt={item.name} className="h-full w-full object-cover" />
-                                                        ) : (
-                                                            <Package className="h-full w-full p-2 text-gray-400" />
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-bold text-gray-800 truncate">{item.name}</p>
-                                                        <p className="text-xs text-gray-500 font-medium font-mono">Qty: {item.quantity}</p>
-                                                    </div>
-                                                    <div className="text-sm font-bold text-gray-900">
-                                                        ₹{(item.price * item.quantity).toFixed(2)}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {order.orderType === 'Home Delivery' && order.shippingAddress && (
-                                        <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100 h-full">
-                                            <h4 className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-widest border-b border-gray-200 pb-2 mb-3">
-                                                <MapPin className="h-4 w-4 text-gray-400" /> Shipping Details
-                                            </h4>
-                                            <div className="text-sm text-gray-600 font-medium leading-relaxed">
-                                                <p>{order.shippingAddress.address}</p>
-                                                <p>{order.shippingAddress.city}, {order.shippingAddress.postalCode}</p>
-                                                <p>{order.shippingAddress.country}</p>
+                                <div key={order._id} className="bg-white rounded-3xl overflow-hidden shadow-md border border-gray-100 hover:shadow-lg transition-all group">
+                                    <div className="bg-gray-50/80 px-6 py-5 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-black text-gray-400 tracking-widest uppercase">Order ID</span>
+                                                <span className="text-sm font-bold text-gray-700 font-mono bg-white px-2 py-0.5 rounded border border-gray-200">#{order._id.substring(order._id.length - 8).toUpperCase()}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-gray-500 text-sm font-medium">
+                                                <CalendarDays className="h-4 w-4" />
+                                                {new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                                
-                                {['Pending', 'Packed'].includes(order.status) && (
-                                    <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end">
-                                        <button 
-                                            onClick={() => handleCancel(order._id)}
-                                            className="px-6 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-sm font-bold transition-all border border-red-100"
-                                        >
-                                            Cancel Order
-                                        </button>
+
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 ${order.status === 'Delivered' || order.status === 'Picked Up' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                                    order.status === 'Cancelled' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                                        order.status === 'Out for delivery' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                                                            'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                                                }`}>
+                                                {order.status === 'Delivered' || order.status === 'Picked Up' ? <CheckCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                                                {order.status}
+                                            </span>
+                                            <div className="text-xl font-black text-gray-900 tracking-tight">
+                                                ₹{order.totalPrice.toFixed(2)}
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
-                        </div>
+
+                                    <div className="p-6">
+                                        <div className="flex items-center gap-3 mb-6 bg-blue-50/50 p-3 rounded-xl border border-blue-100/50 w-max">
+                                            {order.orderType === 'Home Delivery' ? (
+                                                <>
+                                                    <Truck className="h-5 w-5 text-blue-600" />
+                                                    <span className="font-bold text-blue-800 text-sm">Home Delivery</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Store className="h-5 w-5 text-purple-600" />
+                                                    <span className="font-bold text-purple-800 text-sm">Take Away</span>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                            <div className="space-y-4">
+                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-widest border-b border-gray-100 pb-2">Items</h4>
+                                                <div className="space-y-3">
+                                                    {order.orderItems.map((item, idx) => (
+                                                        <div key={idx} className="flex items-center gap-3">
+                                                            <div className="h-12 w-12 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200">
+                                                                {hasProductImage(item.image) ? (
+                                                                    <img src={getProductImageUrl(item.image)} alt={item.name} className="h-full w-full object-cover" />
+                                                                ) : (
+                                                                    <Package className="h-full w-full p-2 text-gray-400" />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-bold text-gray-800 truncate">{item.name}</p>
+                                                                <p className="text-xs text-gray-500 font-medium font-mono">Qty: {item.quantity}</p>
+                                                            </div>
+                                                            <div className="text-sm font-bold text-gray-900">
+                                                                ₹{(item.price * item.quantity).toFixed(2)}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {order.orderType === 'Home Delivery' && order.shippingAddress && (
+                                                <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100 h-full">
+                                                    <h4 className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-widest border-b border-gray-200 pb-2 mb-3">
+                                                        <MapPin className="h-4 w-4 text-gray-400" /> Shipping Details
+                                                    </h4>
+                                                    <div className="text-sm text-gray-600 font-medium leading-relaxed">
+                                                        <p>{order.shippingAddress.address}</p>
+                                                        <p>{order.shippingAddress.city}, {order.shippingAddress.postalCode}</p>
+                                                        <p>{order.shippingAddress.country}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {['Pending', 'Packed'].includes(order.status) && (
+                                            <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end">
+                                                <button
+                                                    onClick={() => handleCancel(order._id)}
+                                                    className="px-6 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-sm font-bold transition-all border border-red-100"
+                                                >
+                                                    Cancel Order
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     )}

@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../shared/context/AuthContext';
 import { ShoppingBag, Users, Package, FileText, ArrowUpRight, TrendingUp, Settings as SettingsIcon, Save, AlertTriangle, RefreshCw, Clock, Truck } from 'lucide-react';
 import api from '../shared/services/api';
@@ -85,24 +86,41 @@ const StoreSettings = () => {
   );
 };
 
-/* eslint-disable-next-line no-unused-vars */
-const StatCard = ({ title, value, icon: Icon, trend }) => (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between hover:shadow-md transition-shadow">
-    <div>
-      <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-      <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
-      {trend && (
-        <p className="text-xs text-green-600 mt-2 flex items-center font-medium">
-          <TrendingUp className="h-3 w-3 mr-1" />
-          {trend} from last month
-        </p>
-      )}
+const StatCard = ({ title, value, icon: Icon, trend, to }) => {
+  const CardContent = (
+    <>
+      <div>
+        <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
+        <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
+        {trend && (
+          <p className="text-xs text-green-600 mt-2 flex items-center font-medium">
+            <TrendingUp className="h-3 w-3 mr-1" />
+            {trend} from last month
+          </p>
+        )}
+      </div>
+      <div className="bg-primary-50 p-4 rounded-full text-primary-600 flex-shrink-0">
+        <Icon className="h-6 w-6" />
+      </div>
+    </>
+  );
+
+  const containerClasses = "bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between transition-all h-full";
+
+  if (to) {
+    return (
+      <Link to={to} className={`${containerClasses} hover:shadow-md hover:border-primary-200 cursor-pointer`}>
+        {CardContent}
+      </Link>
+    );
+  }
+
+  return (
+    <div className={containerClasses}>
+      {CardContent}
     </div>
-    <div className="bg-primary-50 p-4 rounded-full text-primary-600">
-      <Icon className="h-6 w-6" />
-    </div>
-  </div>
-);
+  );
+};
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
@@ -254,9 +272,9 @@ const Dashboard = () => {
       {user.role === 'admin' ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatCard title="Total Inventory Value" value={`₹${stats.totalInventoryValue.toLocaleString()}`} icon={ShoppingBag} />
-            <StatCard title="Active Subscriptions" value={stats.activeSubscriptions} icon={FileText} />
-            <StatCard title="Products in Stock" value={stats.totalProductsInStock.toLocaleString()} icon={Package} />
+            <StatCard title="Total Inventory Value" value={`₹${stats.totalInventoryValue.toLocaleString()}`} icon={ShoppingBag} to="/products" />
+            <StatCard title="Active Subscriptions" value={stats.activeSubscriptions} icon={FileText} to="/subscriptions" />
+            <StatCard title="Products in Stock" value={stats.totalProductsInStock.toLocaleString()} icon={Package} to="/products" />
             <StatCard title="Total Customers" value={stats.totalCustomers} icon={Users} />
           </div>
 
@@ -274,16 +292,19 @@ const Dashboard = () => {
               title={user.employeeType === 'manager' ? 'Store Orders' : 'Assigned Orders'}
               value={assignedOrders.length}
               icon={ShoppingBag}
+              to="/store-orders"
             />
             <StatCard
               title="Pending"
               value={assignedOrders.filter(o => ['Pending', 'Packed', 'Pickup Ready', 'Ready to deliver'].includes(o.status)).length}
               icon={Clock}
+              to="/store-orders"
             />
             <StatCard
               title="Deliveries"
               value={assignedOrders.filter(o => ['Out for delivery', 'Delivered'].includes(o.status)).length}
               icon={Truck}
+              to="/store-orders?tab=completed"
             />
           </div>
 
@@ -353,8 +374,8 @@ const Dashboard = () => {
       ) : (
         // Customer Dashboard
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="My Active Schedules" value={stats.mySubscriptions} icon={FileText} />
-          <StatCard title="Total Orders" value={numberOfOrders} icon={Package} />
+          <StatCard title="My Active Subscriptions" value={stats.mySubscriptions} icon={FileText} to="/my-subscriptions" />
+          <StatCard title="Total Orders" value={numberOfOrders} icon={Package} to="/my-orders" />
         </div>
       )}
     </div>

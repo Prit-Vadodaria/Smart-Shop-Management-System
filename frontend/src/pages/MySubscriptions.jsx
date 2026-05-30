@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../shared/services/api';
 import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
-import { Calendar, Play, Pause, Trash2, Plus, Search, Info, CheckCircle, ChevronRight, Settings } from 'lucide-react';
+import { Calendar, Play, Pause, Trash2, Plus, Search, Info, CheckCircle, ChevronRight, Settings, AlertTriangle } from 'lucide-react';
 
 const MySubscriptions = () => {
     const [lists, setLists] = useState([]);
@@ -10,6 +10,7 @@ const MySubscriptions = () => {
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('Daily');
+    const [customAlert, setCustomAlert] = useState('');
 
     const fetchSubscriptionData = async () => {
         try {
@@ -37,7 +38,7 @@ const MySubscriptions = () => {
             const { data } = await api.put(`/subscriptions/${listId}/items`, { items: newItems });
             setLists(lists.map(l => l._id === listId ? data : l));
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to update items');
+            setCustomAlert(err.response?.data?.message || 'Failed to update items');
         }
     };
 
@@ -46,18 +47,32 @@ const MySubscriptions = () => {
             const { data } = await api.put(`/subscriptions/${listId}/settings`, settings);
             setLists(lists.map(l => l._id === listId ? { ...l, ...data } : l));
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to update settings');
+            setCustomAlert(err.response?.data?.message || 'Failed to update settings');
         }
     };
 
-    const addItemToList = (list, product) => {
+    const addItemToList = async (list, product) => {
         const existing = list.items.find(i => i.product._id === product._id);
         if (existing) {
-            alert('Item already in this list');
+            setCustomAlert('Item already in this list');
             return;
         }
         const newItems = [...list.items.map(i => ({ product: i.product._id, quantity: i.quantity })), { product: product._id, quantity: product.minSubscriptionQuantity || 1 }];
-        updateListItems(list._id, newItems);
+        
+        try {
+            const { data } = await api.put(`/subscriptions/${list._id}/items`, { items: newItems });
+            let updatedList = data;
+            
+            // If the list was previously empty, force it to 'Paused' so it doesn't jump to 'Active'
+            if (!list.items || list.items.length === 0) {
+                const { data: settingsData } = await api.put(`/subscriptions/${list._id}/settings`, { status: 'Paused' });
+                updatedList = { ...updatedList, ...settingsData };
+            }
+            
+            setLists(prevLists => prevLists.map(l => l._id === list._id ? updatedList : l));
+        } catch (err) {
+            setCustomAlert(err.response?.data?.message || 'Failed to add item');
+        }
     };
 
     const removeItemFromList = (list, productId) => {
@@ -97,7 +112,7 @@ const MySubscriptions = () => {
     }
 
     const currentList = lists.find(l => l.type === activeTab);
-    const filteredEligible = eligibleProducts.filter(p => 
+    const filteredEligible = eligibleProducts.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -129,11 +144,10 @@ const MySubscriptions = () => {
                                 <button
                                     key={type}
                                     onClick={() => setActiveTab(type)}
-                                    className={`flex items-center justify-between p-4 rounded-2xl transition-all ${
-                                        activeTab === type 
-                                        ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30' 
-                                        : 'bg-transparent text-gray-600 hover:bg-gray-50'
-                                    }`}
+                                    className={`flex items-center justify-between p-4 rounded-2xl transition-all ${activeTab === type
+                                            ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                                            : 'bg-transparent text-gray-600 hover:bg-gray-50'
+                                        }`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-xl ${activeTab === type ? 'bg-white/20' : 'bg-gray-100'}`}>
@@ -141,7 +155,7 @@ const MySubscriptions = () => {
                                         </div>
                                         <div className="text-left">
                                             <p className="font-bold text-sm">{type === 'Daily' ? 'Daily Delivery' : type === 'Alternate' ? 'Every 2nd Day' : 'Specific Dates'}</p>
-                                            <p className={`text-[10px] ${activeTab === type ? 'text-white/70' : 'text-gray-400'}`}>
+                                            <p className={`text-sm font-semibold mt-0.5 ${activeTab === type ? 'text-white/90' : 'text-gray-500'}`}>
                                                 {lists.find(l => l.type === type)?.items?.length || 0} items in list
                                             </p>
                                         </div>
@@ -159,17 +173,22 @@ const MySubscriptions = () => {
                                     <Settings className="h-4 w-4 text-primary-600" />
                                     List Settings
                                 </h3>
-                                <span className={`text-[10px] uppercase font-black px-2 py-1 rounded-full ${
-                                    currentList.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                                }`}>
-                                    {currentList.status}
-                                </span>
+                                {(() => {
+                                    const isListEmpty = !currentList?.items || currentList.items.length === 0;
+                                    const displayStatus = isListEmpty ? 'Inactive' : currentList.status;
+                                    return (
+                                        <span className={`text-[10px] uppercase font-black px-2 py-1 rounded-full ${displayStatus === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                            }`}>
+                                            {displayStatus}
+                                        </span>
+                                    );
+                                })()}
                             </div>
 
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Commencement Date</label>
-                                    <input 
+                                    <input
                                         type="date"
                                         value={new Date(currentList.startDate).toISOString().split('T')[0]}
                                         min={new Date().toISOString().split('T')[0]}
@@ -186,11 +205,10 @@ const MySubscriptions = () => {
                                                 <button
                                                     key={day}
                                                     onClick={() => toggleMonthlyDate(currentList, day)}
-                                                    className={`h-7 w-7 rounded-lg text-[10px] font-bold transition-all ${
-                                                        currentList.customDates?.includes(day)
-                                                        ? 'bg-primary-600 text-white shadow-sm'
-                                                        : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
-                                                    }`}
+                                                    className={`h-7 w-7 rounded-lg text-[10px] font-bold transition-all ${currentList.customDates?.includes(day)
+                                                            ? 'bg-primary-600 text-white shadow-sm'
+                                                            : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+                                                        }`}
                                                 >
                                                     {day}
                                                 </button>
@@ -200,21 +218,40 @@ const MySubscriptions = () => {
                                 )}
 
                                 <div className="pt-4 border-t border-gray-50 flex gap-2">
-                                    {currentList.status === 'Active' ? (
-                                        <button 
-                                            onClick={() => updateListSettings(currentList._id, { status: 'Paused' })}
-                                            className="flex-1 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold transition-colors"
-                                        >
-                                            <Pause className="h-3.5 w-3.5" /> Pause List
-                                        </button>
-                                    ) : (
-                                        <button 
-                                            onClick={() => updateListSettings(currentList._id, { status: 'Active' })}
-                                            className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold transition-colors"
-                                        >
-                                            <Play className="h-3.5 w-3.5" /> Resume List
-                                        </button>
-                                    )}
+                                    {(() => {
+                                        const isListEmpty = !currentList?.items || currentList.items.length === 0;
+                                        if (currentList.status === 'Active' && !isListEmpty) {
+                                            return (
+                                                <button
+                                                    onClick={() => {
+                                                        if (isListEmpty) {
+                                                            setCustomAlert("Please add an Item to Start/Resume the list.");
+                                                            return;
+                                                        }
+                                                        updateListSettings(currentList._id, { status: 'Paused' });
+                                                    }}
+                                                    className="flex-1 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold transition-colors"
+                                                >
+                                                    <Pause className="h-3.5 w-3.5" /> Stop List
+                                                </button>
+                                            );
+                                        } else {
+                                            return (
+                                                <button
+                                                    onClick={() => {
+                                                        if (isListEmpty) {
+                                                            setCustomAlert("Please add an Item to Start/Resume the list.");
+                                                            return;
+                                                        }
+                                                        updateListSettings(currentList._id, { status: 'Active' });
+                                                    }}
+                                                    className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold transition-colors"
+                                                >
+                                                    <Play className="h-3.5 w-3.5" /> {isListEmpty ? 'Start List' : 'Resume List'}
+                                                </button>
+                                            );
+                                        }
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -227,7 +264,7 @@ const MySubscriptions = () => {
                     <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
                         <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
                             <h2 className="text-xl font-bold text-gray-900">Items in This Schedule</h2>
-                            <span className="text-xs font-bold text-gray-400">{currentList?.items?.length || 0} items</span>
+                            <span className="text-sm font-bold text-primary-600 bg-primary-50 px-3 py-1 rounded-lg">{currentList?.items?.length || 0} items</span>
                         </div>
                         <div className="p-8">
                             {currentList?.items?.length === 0 ? (
@@ -255,21 +292,21 @@ const MySubscriptions = () => {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <div className="flex items-center bg-white rounded-xl border border-gray-100 p-1 shadow-sm">
-                                                    <button 
+                                                    <button
                                                         onClick={() => changeQuantity(currentList, item.product._id, -1)}
                                                         className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-400 transition-colors"
                                                     >
                                                         -
                                                     </button>
                                                     <span className="w-8 text-center text-sm font-bold text-gray-900">{item.quantity}</span>
-                                                    <button 
+                                                    <button
                                                         onClick={() => changeQuantity(currentList, item.product._id, 1)}
                                                         className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-gray-50 text-gray-400 transition-colors"
                                                     >
                                                         +
                                                     </button>
                                                 </div>
-                                                <button 
+                                                <button
                                                     onClick={() => removeItemFromList(currentList, item.product._id)}
                                                     className="p-2 text-gray-300 hover:text-red-500 transition-colors"
                                                 >
@@ -306,13 +343,12 @@ const MySubscriptions = () => {
                             {filteredEligible.map(product => {
                                 const inList = currentList?.items?.some(i => i.product._id === product._id);
                                 return (
-                                    <div 
-                                        key={product._id} 
-                                        className={`p-4 rounded-3x l border transition-all ${
-                                            inList 
-                                            ? 'bg-primary-50/30 border-primary-100 opacity-80' 
-                                            : 'bg-white border-gray-100 hover:shadow-lg hover:border-primary-200 shadow-sm'
-                                        }`}
+                                    <div
+                                        key={product._id}
+                                        className={`p-4 rounded-3x l border transition-all ${inList
+                                                ? 'bg-primary-50/30 border-primary-100 opacity-80'
+                                                : 'bg-white border-gray-100 hover:shadow-lg hover:border-primary-200 shadow-sm'
+                                            }`}
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
@@ -331,7 +367,7 @@ const MySubscriptions = () => {
                                                     <Plus className="h-3 w-3 rotate-45" />
                                                 </div>
                                             ) : (
-                                                <button 
+                                                <button
                                                     onClick={() => addItemToList(currentList, product)}
                                                     className="bg-white hover:bg-primary-600 hover:text-white text-primary-600 border border-primary-200 w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-sm"
                                                 >
@@ -346,6 +382,25 @@ const MySubscriptions = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Custom Alert Modal */}
+            {customAlert && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-xl max-w-sm w-full p-6 text-center animate-in zoom-in-95 duration-200">
+                        <div className="w-16 h-16 bg-yellow-50 text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <AlertTriangle className="h-8 w-8" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Notice</h3>
+                        <p className="text-gray-500 font-medium mb-6">{customAlert}</p>
+                        <button
+                            onClick={() => setCustomAlert('')}
+                            className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-xl transition-colors"
+                        >
+                            Okay
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

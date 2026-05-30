@@ -110,7 +110,7 @@ const Navbar = () => {
                       Shop
                     </Link>
                     <Link to="/my-subscriptions" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
-                      My Auto-Delivery
+                      My Subscriptions
                     </Link>
                     <Link to="/my-orders" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                       My Orders
@@ -242,7 +242,7 @@ const Navbar = () => {
             {user ? (
               <>
                 <Link to="/profile" className="px-4 py-3 border-b border-gray-50 block hover:bg-gray-50">
-                  <p className="text-sm font-bold text-primary-600 flex items-center gap-2"><User className="h-4 w-4"/> View Profile</p>
+                  <p className="text-sm font-bold text-primary-600 flex items-center gap-2"><User className="h-4 w-4" /> View Profile</p>
                   <p className="text-sm font-medium text-gray-900 mt-1">{user.name}</p>
                   <p className="text-sm font-medium text-gray-500 truncate">{user.email}</p>
                 </Link>
