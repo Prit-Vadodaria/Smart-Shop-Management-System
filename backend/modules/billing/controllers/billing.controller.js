@@ -42,6 +42,25 @@ const abortTransaction = async (session) => {
   }
 };
 
+const normalizeOrderType = (rawOrderType) => {
+  return rawOrderType === 'Home Delivery' ? 'Home Delivery' : 'Takeaway';
+};
+
+const deriveOrderChannel = ({ orderType, explicitOrderChannel, isPOS, isSubscription }) => {
+  if (isSubscription) return 'Subscription Order';
+
+  if (explicitOrderChannel) {
+    const normalized = String(explicitOrderChannel).trim().toLowerCase();
+    if (normalized === 'subscription order') return 'Subscription Order';
+    if (normalized === 'online order') return 'Online Order';
+    if (normalized === 'pos order') return 'POS Order';
+    if (normalized === 'takeaway order') return 'Takeaway Order';
+  }
+
+  if (isPOS) return 'POS Order';
+  return orderType === 'Home Delivery' ? 'Online Order' : 'Takeaway Order';
+};
+
 // @desc    Create new order
 // @route   POST /api/orders
 // @access  Private (Customer/Staff)
@@ -55,12 +74,13 @@ export const addOrderItems = async (req, res, next) => {
       shippingAddress,
       paymentMethod,
       orderType,
+      orderChannel,
       itemsPrice,
       taxPrice,
       shippingPrice,
       totalPrice,
       customerId,
-      customerName, 
+      customerName,
       isPaid,
       isDelivered,
       transactionId,
@@ -80,12 +100,13 @@ export const addOrderItems = async (req, res, next) => {
     const canPosForCustomer =
       req.user.role === 'admin' ||
       req.user.role === 'employee';
+    const isSubscriptionOrder = Boolean(req.body.subscriptionId || req.body.subscription);
 
     if (canPosForCustomer) {
       if (customerId) {
         finalCustomer = customerId;
       } else if (customerName) {
-        finalCustomer = null; 
+        finalCustomer = null;
         finalCustomerName = customerName;
       }
     }
@@ -93,13 +114,22 @@ export const addOrderItems = async (req, res, next) => {
     // Deduct stock using the service helper
     await updateStock(orderItems, false, session);
 
+    const normalizedOrderType = normalizeOrderType(orderType);
+    const normalizedOrderChannel = deriveOrderChannel({
+      orderType: normalizedOrderType,
+      explicitOrderChannel: orderChannel,
+      isPOS: canPosForCustomer,
+      isSubscription: isSubscriptionOrder
+    });
+
     const order = new Order({
       orderItems,
       customer: finalCustomer,
       customerName: finalCustomerName,
       shippingAddress,
       paymentMethod,
-      orderType,
+      orderType: normalizedOrderType,
+      orderChannel: normalizedOrderChannel,
       itemsPrice,
       taxPrice,
       shippingPrice,
@@ -323,7 +353,7 @@ export const assignOrderToStaff = async (req, res, next) => {
         await Notification.create({
           user: staffId,
           title: 'New Order Assigned',
-          message: `You have been assigned to order ORD-${order._id.toString().substring(order._id.toString().length-8).toUpperCase()} for delivery.`,
+          message: `You have been assigned to order ORD-${order._id.toString().substring(order._id.toString().length - 8).toUpperCase()} for delivery.`,
           relatedId: order._id.toString()
         });
       }
@@ -530,6 +560,7 @@ export const subscriptionCheckout = async (req, res, next) => {
         country: 'India'
       },
       orderType: 'Home Delivery',
+      orderChannel: 'Subscription Order',
       paymentMethod: 'Cash',
       isPaid: false,
       status: 'Pending'

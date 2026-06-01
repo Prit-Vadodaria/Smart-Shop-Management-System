@@ -113,18 +113,25 @@ export const markPaymentCancelled = async (orderId, session = null) => {
  */
 export const syncOrderPaymentState = async (order, session = null) => {
   const options = session ? { session } : {};
-  const payment = await Payment.findOne({ orderId: order._id }, null, options);
-  if (payment) {
-    if (payment.status === 'Success') {
-      order.isPaid = true;
-      order.paidAt = payment.paidAt || new Date();
-    } else if (payment.status === 'Cancelled') {
-      order.isPaid = false;
-      order.paidAt = undefined;
-    } else {
-      order.isPaid = false;
-      order.paidAt = undefined;
-    }
+  const payment = await Payment.findOne({ orderId: order._id }, null, options).sort({ createdAt: -1 });
+
+  if (!payment) {
+    // Some legacy/subscription-generated orders may not yet have a payment row.
+    // Persist current order changes (e.g. status/assignment) without mutating payment flags.
     await order.save(options);
+    return;
   }
+
+  if (payment.status === 'Success') {
+    order.isPaid = true;
+    order.paidAt = payment.paidAt || new Date();
+  } else if (payment.status === 'Cancelled') {
+    order.isPaid = false;
+    order.paidAt = undefined;
+  } else {
+    order.isPaid = false;
+    order.paidAt = undefined;
+  }
+
+  await order.save(options);
 };

@@ -21,6 +21,8 @@ import StoreOrders from './pages/StoreOrders';
 import MySubscriptions from './pages/MySubscriptions';
 import AdminSubscriptions from './pages/AdminSubscriptions';
 import Employees from './pages/Employees';
+import CustomersList from './pages/CustomersList';
+import CustomerProfile from './pages/CustomerProfile';
 
 function App() {
   return (
@@ -104,6 +106,18 @@ function App() {
             <Route path="/employees" element={
               <ProtectedRoute roles={['admin']}>
                 <Employees />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/admin/customers" element={
+              <ProtectedRoute roles={['admin', 'employee']}>
+                <CustomersList />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/admin/customers/:id" element={
+              <ProtectedRoute roles={['admin', 'employee']}>
+                <CustomerProfile />
               </ProtectedRoute>
             } />
 

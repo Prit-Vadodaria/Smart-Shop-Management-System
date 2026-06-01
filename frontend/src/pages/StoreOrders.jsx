@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { AuthContext } from '../shared/context/AuthContext';
 import { Package, Truck, Store, MapPin, CheckCircle, Clock, Search, Filter, Trash2, Plus, ShoppingCart, User as UserIcon, X, CreditCard } from 'lucide-react';
 import api from '../shared/services/api';
+import OrderTypeBadge from '../components/orders/OrderTypeBadge';
+import { ORDER_TYPE_FILTER_OPTIONS, matchesOrderTypeFilter } from '../shared/utils/orderTypeFilter';
 
 const StoreOrders = () => {
     const { user } = useContext(AuthContext);
@@ -11,6 +13,8 @@ const StoreOrders = () => {
     const [staffList, setStaffList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState(new URLSearchParams(location.search).get('tab') || 'active'); // active, completed, cancelled
+    const [orderTypeFilter, setOrderTypeFilter] = useState('all');
+    const [selectedDate, setSelectedDate] = useState('');
 
     // POS State
     const [isPOSOpen, setIsPOSOpen] = useState(false);
@@ -29,8 +33,8 @@ const StoreOrders = () => {
     const [allCustomers, setAllCustomers] = useState([]);
 
     const isManagement =
-      user.role === 'admin' ||
-      (user.role === 'employee' && user.employeeType === 'manager');
+        user.role === 'admin' ||
+        (user.role === 'employee' && user.employeeType === 'manager');
     const canUsePOS = user.role === 'admin' || user.role === 'employee';
 
     // Derived POS Totals (Item-level dynamic tax summation)
@@ -152,6 +156,7 @@ const StoreOrders = () => {
                 customerName: posCustomer.isGuest ? posCustomer.user.name : null,
                 paymentMethod: paymentMode,
                 orderType: 'Takeaway',
+                orderChannel: 'POS Order',
                 itemsPrice: posSubtotal,
                 taxPrice: posTax,
                 shippingPrice: 0,
@@ -244,15 +249,32 @@ const StoreOrders = () => {
     else if (activeTab === 'completed') filteredOrders = completedOrders;
     else if (activeTab === 'cancelled') filteredOrders = cancelledOrders;
 
+    if (isManagement) {
+        filteredOrders = filteredOrders.filter((order) => {
+            if (!matchesOrderTypeFilter(order, orderTypeFilter)) {
+                return false;
+            }
+
+            if (selectedDate) {
+                const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
+                if (orderDate !== selectedDate) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }
+
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 pb-4 border-b border-gray-200">
                 <div>
                     <h1 className="text-3xl font-black text-gray-900 tracking-tight">POS & Orders</h1>
                     <p className="text-gray-500 font-medium mt-1">
-                      {isManagement
-                        ? 'Manage and assign customer orders globally'
-                        : 'Process assigned orders and in-store POS sales'}
+                        {isManagement
+                            ? 'Manage and assign customer orders globally'
+                            : 'Process assigned orders and in-store POS sales'}
                     </p>
                 </div>
                 <div className="mt-4 md:mt-0 flex gap-3">
@@ -272,7 +294,45 @@ const StoreOrders = () => {
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex gap-4 mb-8 bg-gray-100/50 p-1 rounded-2xl w-max">
+            <div className="flex flex-wrap items-end gap-4 mb-8">
+                {isManagement && (
+                    <div className="flex flex-wrap gap-4 items-end">
+                        <div className="flex flex-col gap-1 w-full sm:w-48">
+                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Date</label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer hover:bg-gray-100/50 transition-colors"
+                                />
+                                {selectedDate && (
+                                    <button
+                                        onClick={() => setSelectedDate('')}
+                                        className="p-1 rounded-full hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1 w-full sm:w-52">
+                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Order Type</label>
+                            <select
+                                value={orderTypeFilter}
+                                onChange={(e) => setOrderTypeFilter(e.target.value)}
+                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer hover:bg-gray-100/50 transition-colors"
+                            >
+                                {ORDER_TYPE_FILTER_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>{option.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex gap-4 bg-gray-100/50 p-1 rounded-2xl w-max">
                 <button
                     onClick={() => setActiveTab('active')}
                     className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'active' ? 'bg-white text-primary-600 shadow-sm border border-gray-100' : 'text-gray-500 hover:text-gray-700'}`}
@@ -291,6 +351,7 @@ const StoreOrders = () => {
                 >
                     Cancelled ({cancelledOrders.length})
                 </button>
+                </div>
             </div>
 
             <div className="space-y-6">
@@ -303,8 +364,9 @@ const StoreOrders = () => {
                 ) : (
                     filteredOrders.map(order => {
                         const isAssignedToMe = order.assignedTo?._id === user.id || order.assignedTo?._id === user._id;
+                        const isSubscriptionOrder = order.orderChannel === 'Subscription Order' || Boolean(order.subscription);
                         const isLocked = ['Delivered', 'Picked Up', 'Cancelled'].includes(order.status);
-                        const canEditStatus = (isManagement || isAssignedToMe) && !isLocked;
+                        const canEditStatus = (isManagement || isAssignedToMe || isSubscriptionOrder) && !isLocked;
                         const canAssign = isManagement && !isLocked;
 
                         return (
@@ -322,6 +384,7 @@ const StoreOrders = () => {
                                                 {new Date(order.createdAt).toLocaleString()}
                                             </div>
                                         </div>
+                                        <OrderTypeBadge order={order} className="self-center" />
                                     </div>
                                     <div className="flex items-center gap-6">
 
@@ -390,7 +453,7 @@ const StoreOrders = () => {
                                             </div>
                                             <p className="font-bold text-gray-800">{order.customer?.name || order.customerName || 'Walk-in Customer'}</p>
                                             <p className="text-sm text-gray-500 mb-2">Total: ₹{order.totalPrice.toFixed(2)}</p>
-                                            
+
                                             {order.orderType === 'Home Delivery' && order.shippingAddress && (
                                                 <div className="text-sm text-gray-600 flex gap-2">
                                                     <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />

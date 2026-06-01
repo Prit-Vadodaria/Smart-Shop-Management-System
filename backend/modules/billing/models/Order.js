@@ -34,6 +34,12 @@ const OrderSchema = new mongoose.Schema({
     enum: ['Takeaway', 'Home Delivery'],
     required: true
   },
+  orderChannel: {
+    type: String,
+    enum: ['Subscription Order', 'Online Order', 'POS Order', 'Takeaway Order'],
+    required: false,
+    default: null
+  },
   paymentMethod: {
     type: String,
     required: true,
