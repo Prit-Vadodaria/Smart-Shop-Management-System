@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../shared/context/AuthContext';
 import { isManagerOrAdmin } from '../components/ProtectedRoute';
 import api from '../shared/services/api';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 import { Package, Plus, Search, Edit2, Trash2, X, Filter, ArrowUp, ArrowDown, ChevronDown, Upload } from 'lucide-react';
 
@@ -49,6 +50,13 @@ const Products = () => {
     useEffect(() => {
         fetchProducts();
     }, []);
+
+    useRealtimeEvent(
+      (event) => ['product:changed', 'subscription:changed', 'dashboard:changed'].includes(event.event),
+      () => {
+        fetchProducts();
+      }
+    );
 
     // Extract unique categories for filter
     const categories = ['All', ...new Set(products.map(p => p.category))];

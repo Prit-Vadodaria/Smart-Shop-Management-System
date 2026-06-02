@@ -5,6 +5,7 @@ import { Package, Truck, Store, MapPin, CheckCircle, Clock, Search, Filter, Tras
 import api from '../shared/services/api';
 import OrderTypeBadge from '../components/orders/OrderTypeBadge';
 import { ORDER_TYPE_FILTER_OPTIONS, matchesOrderTypeFilter } from '../shared/utils/orderTypeFilter';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 
 const StoreOrders = () => {
     const { user } = useContext(AuthContext);
@@ -64,6 +65,16 @@ const StoreOrders = () => {
 
         fetchInitialData();
     }, [isManagement]);
+
+    useRealtimeEvent(
+      (event) => ['order:changed', 'dashboard:changed', 'product:changed', 'subscription:changed'].includes(event.event),
+      () => {
+        api.get('/orders').then(({ data }) => setOrders(data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)))).catch(() => {});
+        if (isManagement) {
+          api.get('/auth/staff').then(({ data }) => setStaffList(data.data)).catch(() => {});
+        }
+      }
+    );
 
     // Fetch All Products and Customers when POS Opens
     useEffect(() => {

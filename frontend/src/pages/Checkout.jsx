@@ -3,6 +3,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { CreditCard, CheckCircle, Loader2, ShoppingBag, MapPin } from 'lucide-react';
 import api from '../shared/services/api';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 
 const Checkout = () => {
     const location = useLocation();
@@ -38,6 +39,28 @@ const Checkout = () => {
         };
         fetchAddresses();
     }, []);
+
+    useRealtimeEvent(
+      (event) => ['customer:changed', 'auth:changed', 'settings:changed'].includes(event.event),
+      () => {
+        const fetchAddresses = async () => {
+          try {
+            const { data } = await api.get('/customers/profile');
+            const pData = data.data || data;
+            if (pData?.addresses?.length > 0) {
+              setAddresses(pData.addresses);
+              const defaultAddr = pData.addresses.find(a => a.isDefaultDelivery) || pData.addresses[0];
+              setSelectedAddressId(defaultAddr._id);
+            }
+          } catch (err) {
+            console.error('Failed to load addresses', err);
+          } finally {
+            setLoadingAddresses(false);
+          }
+        };
+        fetchAddresses();
+      }
+    );
 
     if (!location.state) {
         return (

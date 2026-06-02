@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import api from '../shared/services/api';
 import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 import { Calendar, Play, Pause, Trash2, Plus, Search, Info, CheckCircle, ChevronRight, Settings, AlertTriangle } from 'lucide-react';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 
 const MySubscriptions = () => {
     const [lists, setLists] = useState([]);
@@ -42,6 +43,13 @@ const MySubscriptions = () => {
     useEffect(() => {
         fetchSubscriptionData();
     }, []);
+
+    useRealtimeEvent(
+      (event) => ['product:changed', 'subscription:changed', 'settings:changed', 'dashboard:changed'].includes(event.event),
+      () => {
+        fetchSubscriptionData();
+      }
+    );
 
 
 

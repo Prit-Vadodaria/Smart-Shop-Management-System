@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../shared/services/api';
 import { Calendar, Search, Filter, Truck, CheckCircle, ListChecks, Package } from 'lucide-react';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 
 const AdminSubscriptions = () => {
     const [subscriptions, setSubscriptions] = useState([]);
@@ -25,6 +26,13 @@ const AdminSubscriptions = () => {
     useEffect(() => {
         fetchSubscriptions();
     }, []);
+
+    useRealtimeEvent(
+      (event) => ['subscription:changed', 'order:changed', 'dashboard:changed'].includes(event.event),
+      () => {
+        fetchSubscriptions();
+      }
+    );
 
     const filteredSubscriptions = subscriptions.filter(sub => {
         const matchStatus = statusFilter === 'All' || sub.status === statusFilter;

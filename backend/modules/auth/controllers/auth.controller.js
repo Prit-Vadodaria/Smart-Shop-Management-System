@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import EmployeeProfile from '../models/EmployeeProfile.js';
 import { assertValidPassword, PASSWORD_RULES, validatePassword } from '../../../utils/passwordValidation.js';
 import { buildResetPasswordUrl, sendPasswordResetEmail } from '../../../utils/passwordResetEmail.js';
+import { publishRealtimeEvent } from '../../../services/realtimeHub.js';
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRE || '30d';
 
@@ -84,6 +85,7 @@ export const register = async (req, res, next) => {
     });
 
     res.status(201).json(buildAuthResponse(user));
+    publishRealtimeEvent('auth:changed', { userId: user._id.toString(), reason: 'customer_registered' });
   } catch (error) {
     next(error);
   }
@@ -214,6 +216,7 @@ export const createEmployee = async (req, res, next) => {
         isActive: user.isActive,
       },
     });
+    publishRealtimeEvent('auth:changed', { userId: user._id.toString(), reason: 'employee_created' });
   } catch (error) {
     next(error);
   }
@@ -251,6 +254,7 @@ export const resetEmployeePassword = async (req, res, next) => {
     await employee.save();
 
     res.status(200).json({ success: true, message: 'Employee password reset successfully!' });
+    publishRealtimeEvent('auth:changed', { userId: employee._id.toString(), reason: 'employee_password_reset' });
   } catch (error) {
     next(error);
   }
@@ -287,6 +291,7 @@ export const updateEmployeeStatus = async (req, res, next) => {
         isActive: employee.isActive
       }
     });
+    publishRealtimeEvent('auth:changed', { userId: employee._id.toString(), reason: 'employee_status_changed' });
   } catch (error) {
     next(error);
   }
@@ -318,6 +323,7 @@ export const updateEmployeePosition = async (req, res, next) => {
         employeeType: employee.employeeType,
       },
     });
+    publishRealtimeEvent('auth:changed', { userId: employee._id.toString(), reason: 'employee_position_changed' });
   } catch (error) {
     next(error);
   }
@@ -506,6 +512,7 @@ export const updateEmployeeProfile = async (req, res, next) => {
     }
 
     res.json({ success: true, data: profile });
+    publishRealtimeEvent('auth:changed', { userId: req.user._id.toString(), reason: 'employee_profile_updated' });
   } catch (error) {
     next(error);
   }
@@ -531,6 +538,7 @@ export const updateEmployeeEmail = async (req, res, next) => {
     employee.email = email;
     await employee.save();
     res.json({ success: true, message: 'Employee email updated', data: employee });
+    publishRealtimeEvent('auth:changed', { userId: employee._id.toString(), reason: 'employee_email_updated' });
   } catch (error) {
     next(error);
   }
@@ -553,6 +561,7 @@ export const updateEmployeeRole = async (req, res, next) => {
 
     await employee.save();
     res.json({ success: true, message: 'Employee role updated', data: employee });
+    publishRealtimeEvent('auth:changed', { userId: employee._id.toString(), reason: 'employee_role_updated' });
   } catch (error) {
     next(error);
   }

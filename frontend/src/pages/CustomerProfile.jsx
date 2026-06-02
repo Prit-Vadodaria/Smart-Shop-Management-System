@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../shared/services/api';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 import {
   User,
   Mail,
@@ -53,6 +54,13 @@ const CustomerProfile = () => {
       fetchCustomerDetails();
     }
   }, [id]);
+
+  useRealtimeEvent(
+    (event) => ['customer:changed', 'auth:changed', 'order:changed', 'subscription:changed', 'dashboard:changed'].includes(event.event),
+    () => {
+      fetchCustomerDetails();
+    }
+  );
 
   const handleToggleStatus = async () => {
     if (!data?.customer) return;

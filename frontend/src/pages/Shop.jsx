@@ -3,6 +3,7 @@ import api from '../shared/services/api';
 import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 import { ShoppingCart, Search, Filter, ChevronDown, ArrowUpDown, CalendarClock, CheckCircle } from 'lucide-react';
 import { CartContext } from '../context/CartContext';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 
 const Shop = () => {
     const { addToCart } = React.useContext(CartContext);
@@ -29,6 +30,13 @@ const Shop = () => {
 
         fetchProducts();
     }, []);
+
+    useRealtimeEvent(
+      (event) => ['product:changed', 'dashboard:changed'].includes(event.event),
+      () => {
+        api.get('/products').then(({ data }) => setProducts(data.data)).catch(() => {});
+      }
+    );
 
     useEffect(() => {
         if (toastMessage) {

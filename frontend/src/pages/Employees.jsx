@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../shared/services/api';
 import { AuthContext } from '../shared/context/AuthContext';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 import {
   Users,
   UserPlus,
@@ -55,6 +56,13 @@ const Employees = () => {
   useEffect(() => {
     fetchEmployees();
   }, []);
+
+  useRealtimeEvent(
+    (event) => event.event === 'auth:changed',
+    () => {
+      fetchEmployees();
+    }
+  );
 
   const handleCreate = async (e) => {
     e.preventDefault();

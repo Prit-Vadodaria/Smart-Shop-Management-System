@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2, Shield, Settings, Briefcase, ListTodo, UserCog } from 'lucide-react';
 import api from '../../shared/services/api';
+import { useRealtimeEvent } from '../../shared/realtime/useRealtimeEvent.js';
 
 const EmployeeProfileView = ({ user }) => {
     const [profile, setProfile] = useState(null);
@@ -13,6 +14,13 @@ const EmployeeProfileView = ({ user }) => {
     useEffect(() => {
         fetchProfile();
     }, []);
+
+    useRealtimeEvent(
+      (event) => ['customer:changed', 'auth:changed'].includes(event.event),
+      () => {
+        fetchProfile();
+      }
+    );
 
     const fetchProfile = async () => {
         try {

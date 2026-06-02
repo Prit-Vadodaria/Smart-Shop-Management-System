@@ -12,6 +12,7 @@ import {
   markPaymentCancelled,
   syncOrderPaymentState
 } from '../services/payment.service.js';
+import { publishRealtimeEvent } from '../../../services/realtimeHub.js';
 
 // Helper to start transaction only if replica sets are supported (i.e. not 'Single')
 const getSession = async () => {
@@ -181,6 +182,8 @@ export const addOrderItems = async (req, res, next) => {
     await commitTransaction(session);
 
     const finalOrder = await Order.findById(createdOrder._id).populate('customer', 'name email');
+    publishRealtimeEvent('order:changed', { orderId: createdOrder._id.toString(), customerId: finalOrder?.customer?._id?.toString?.() || finalCustomer?.toString?.() || null });
+    publishRealtimeEvent('dashboard:changed', { reason: 'order_created' });
     res.status(201).json(finalOrder);
   } catch (error) {
     await abortTransaction(session);
@@ -237,6 +240,8 @@ export const updateOrderToPaid = async (req, res, next) => {
         .populate('assignedTo', 'id name email role');
 
       res.json(populatedOrder);
+      publishRealtimeEvent('order:changed', { orderId: order._id.toString(), customerId: order.customer?.toString?.() || null });
+      publishRealtimeEvent('dashboard:changed', { reason: 'order_paid' });
     } else {
       await abortTransaction(session);
       res.status(404).json({ success: false, message: 'Order not found' });
@@ -289,6 +294,8 @@ export const updateOrderStatus = async (req, res, next) => {
         .populate('assignedTo', 'id name email role');
 
       res.json(populatedOrder);
+      publishRealtimeEvent('order:changed', { orderId: order._id.toString(), customerId: order.customer?.toString?.() || null });
+      publishRealtimeEvent('dashboard:changed', { reason: 'order_status_updated' });
     } else {
       await abortTransaction(session);
       res.status(404).json({ success: false, message: 'Order not found' });
@@ -356,6 +363,7 @@ export const assignOrderToStaff = async (req, res, next) => {
           message: `You have been assigned to order ORD-${order._id.toString().substring(order._id.toString().length - 8).toUpperCase()} for delivery.`,
           relatedId: order._id.toString()
         });
+        publishRealtimeEvent('notification:changed', { userId: staffId.toString(), reason: 'order_assigned' });
       }
 
       const populatedOrder = await Order.findById(updatedOrder._id)
@@ -410,6 +418,8 @@ export const cancelOrder = async (req, res, next) => {
         .populate('assignedTo', 'id name email role');
 
       res.json(populatedOrder);
+      publishRealtimeEvent('order:changed', { orderId: order._id.toString(), customerId: order.customer?.toString?.() || null });
+      publishRealtimeEvent('dashboard:changed', { reason: 'order_cancelled' });
     } else {
       await abortTransaction(session);
       res.status(404).json({ success: false, message: 'Order not found' });
@@ -430,6 +440,8 @@ export const deleteOrder = async (req, res, next) => {
     if (order) {
       if (req.user.role === 'admin') {
         await Order.deleteOne({ _id: order._id });
+        publishRealtimeEvent('order:changed', { orderId: order._id.toString(), deleted: true });
+        publishRealtimeEvent('dashboard:changed', { reason: 'order_deleted' });
         res.json({ success: true, message: 'Order deleted successfully' });
       } else {
         res.status(401).json({ success: false, message: 'Not authorized to delete orders' });
@@ -581,6 +593,9 @@ export const subscriptionCheckout = async (req, res, next) => {
     await syncOrderPaymentState(savedOrder, session);
 
     await commitTransaction(session);
+    publishRealtimeEvent('order:changed', { orderId: savedOrder._id.toString(), customerId: list.customer._id.toString(), reason: 'subscription_checkout' });
+    publishRealtimeEvent('subscription:changed', { subscriptionId: list._id.toString() });
+    publishRealtimeEvent('dashboard:changed', { reason: 'subscription_checkout' });
 
     res.status(201).json({
       success: true,

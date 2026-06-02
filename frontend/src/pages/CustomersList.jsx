@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../shared/services/api';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 import {
   Users,
   Search,
@@ -68,6 +69,13 @@ const CustomersList = () => {
     }, 300); // Debounce search
     return () => clearTimeout(delayDebounce);
   }, [search, page, sortBy, sortOrder]);
+
+  useRealtimeEvent(
+    (event) => ['customer:changed', 'auth:changed', 'order:changed', 'subscription:changed', 'dashboard:changed'].includes(event.event),
+    () => {
+      fetchCustomers();
+    }
+  );
 
   const handleSort = (field) => {
     if (sortBy === field) {

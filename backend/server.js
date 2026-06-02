@@ -21,6 +21,8 @@ import supplierRoutes from './modules/suppliers/routes/supplier.routes.js';
 import paymentRoutes from './modules/billing/routes/payment.routes.js';
 import settingsRoutes from './modules/settings/routes/settings.routes.js';
 import notificationRoutes from './modules/notifications/routes/notification.routes.js';
+import { addRealtimeClient } from './services/realtimeHub.js';
+import { authenticateRealtime } from './middleware/realtimeAuth.js';
 
 // Load env vars
 dotenv.config();
@@ -58,6 +60,27 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationRoutes);
+
+app.get('/api/realtime/stream', async (req, res) => {
+  const user = await authenticateRealtime(req, res);
+  if (!user) return;
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+  res.write('retry: 3000\n\n');
+
+  const cleanup = addRealtimeClient(res);
+  const keepAlive = setInterval(() => {
+    res.write(':keepalive\n\n');
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    cleanup();
+  });
+});
 
 // Test route
 app.get('/api/health', (req, res) => {

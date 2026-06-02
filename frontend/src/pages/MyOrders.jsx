@@ -4,6 +4,7 @@ import api from '../shared/services/api';
 import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
 import OrderTypeBadge from '../components/orders/OrderTypeBadge';
 import { ORDER_TYPE_FILTER_OPTIONS, matchesOrderTypeFilter } from '../shared/utils/orderTypeFilter';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 
 const MyOrders = () => {
     const [orders, setOrders] = useState([]);
@@ -32,6 +33,13 @@ const MyOrders = () => {
             fetchOrders();
         }, 0);
     }, []);
+
+    useRealtimeEvent(
+      (event) => ['order:changed', 'dashboard:changed'].includes(event.event),
+      () => {
+        fetchOrders();
+      }
+    );
 
     const handleCancel = (orderId) => {
         setConfirmDialog({

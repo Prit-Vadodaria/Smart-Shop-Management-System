@@ -1,4 +1,5 @@
 import Notification from '../models/Notification.js';
+import { publishRealtimeEvent } from '../../../services/realtimeHub.js';
 
 // @desc    Get user notifications
 // @route   GET /api/notifications
@@ -25,6 +26,7 @@ export const markAsRead = async (req, res, next) => {
             notification.isRead = true;
             await notification.save();
             res.json({ message: 'Notification marked as read' });
+            publishRealtimeEvent('notification:changed', { userId: req.user._id.toString(), notificationId: notification._id.toString(), reason: 'read' });
         } else {
             res.status(404).json({ success: false, message: 'Notification not found' });
         }

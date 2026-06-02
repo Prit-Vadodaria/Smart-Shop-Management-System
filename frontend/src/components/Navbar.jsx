@@ -4,7 +4,8 @@ import { AuthContext } from '../shared/context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import { Menu, X, ShoppingBag, User, LogOut, Bell, ShoppingCart, KeyRound } from 'lucide-react';
 import api from '../shared/services/api';
-import { isManagerOrAdmin } from './ProtectedRoute';
+import { isManagerOrAdmin } from '../shared/utils/auth';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -31,6 +32,15 @@ const Navbar = () => {
       return () => clearInterval(interval);
     }
   }, [user]);
+
+  useRealtimeEvent(
+    (event) => ['notification:changed', 'order:changed', 'dashboard:changed', 'auth:changed'].includes(event.event),
+    () => {
+      if (user) {
+        api.get('/notifications').then(({ data }) => setNotifications(data)).catch(() => {});
+      }
+    }
+  );
 
   // Close notifications and mobile menu on page navigation
   useEffect(() => {

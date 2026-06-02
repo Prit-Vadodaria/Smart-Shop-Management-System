@@ -1,5 +1,6 @@
 import CustomerProfile from '../models/CustomerProfile.js';
 import User from '../../auth/models/User.js';
+import { publishRealtimeEvent } from '../../../services/realtimeHub.js';
 
 // @desc    Get logged in customer profile
 // @route   GET /api/customers/profile
@@ -36,6 +37,7 @@ export const setupCustomerProfile = async (req, res, next) => {
       profile.phone = phone || profile.phone;
       if (addresses) profile.addresses = addresses;
       const updatedProfile = await profile.save();
+      publishRealtimeEvent('customer:changed', { customerId: req.user._id.toString(), reason: 'profile_updated' });
       res.json({ success: true, data: updatedProfile });
     } else {
       // Create logic
@@ -77,6 +79,7 @@ export const addAddress = async (req, res, next) => {
     }
     profile.addresses.push({ tag, fullName, phoneNumber, addressLine1, addressLine2, city, state, pincode, landmark, isDefaultDelivery });
     await profile.save();
+    publishRealtimeEvent('customer:changed', { customerId: req.user._id.toString(), reason: 'address_added' });
     return res.json({ success: true, data: profile });
   } catch (error) {
     next(error);
@@ -114,6 +117,7 @@ export const updateCustomerProfile = async (req, res, next) => {
       if (preferences) profile.preferences = { ...profile.preferences, ...preferences };
       await profile.save();
     }
+    publishRealtimeEvent('customer:changed', { customerId: req.user._id.toString(), reason: 'profile_changed' });
     return res.json({ success: true, message: 'Profile updated successfully', data: { user, profile } });
   } catch (error) {
     next(error);
@@ -155,6 +159,7 @@ export const updateAddress = async (req, res, next) => {
     };
     profile.addresses.set(addressIndex, updatedAddr);
     await profile.save();
+    publishRealtimeEvent('customer:changed', { customerId: req.user._id.toString(), reason: 'address_updated' });
     return res.json({ success: true, data: profile });
   } catch (error) {
     next(error);
@@ -177,6 +182,7 @@ export const deleteAddress = async (req, res, next) => {
     }
     profile.addresses = profile.addresses.filter(a => a._id.toString() !== req.params.addressId);
     await profile.save();
+    publishRealtimeEvent('customer:changed', { customerId: req.user._id.toString(), reason: 'address_deleted' });
     return res.json({ success: true, data: profile });
   } catch (error) {
     next(error);
@@ -204,6 +210,7 @@ export const setDefaultDeliveryAddress = async (req, res, next) => {
     profile.addresses.forEach(addr => addr.isDefaultDelivery = false);
     address.isDefaultDelivery = true;
     await profile.save();
+    publishRealtimeEvent('customer:changed', { customerId: req.user._id.toString(), reason: 'default_address_changed' });
     return res.json({ success: true, data: profile });
   } catch (error) {
     next(error);

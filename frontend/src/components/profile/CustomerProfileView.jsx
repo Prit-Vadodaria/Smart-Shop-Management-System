@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Loader2, Plus, Edit, Trash2, MapPin, CheckCircle, Shield } from 'lucide-react';
 import api from '../../shared/services/api';
 import { AuthContext } from '../../shared/context/AuthContext.jsx';
+import { useRealtimeEvent } from '../../shared/realtime/useRealtimeEvent.js';
 
 const CustomerProfileView = ({ user }) => {
     const [profile, setProfile] = useState(null);
@@ -24,6 +25,13 @@ const CustomerProfileView = ({ user }) => {
     useEffect(() => {
         fetchProfile();
     }, []);
+
+    useRealtimeEvent(
+      (event) => ['customer:changed', 'auth:changed'].includes(event.event),
+      () => {
+        fetchProfile();
+      }
+    );
 
     const fetchProfile = async () => {
         try {

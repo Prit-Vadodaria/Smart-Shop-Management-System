@@ -1,4 +1,5 @@
 import Settings from '../models/Settings.js';
+import { publishRealtimeEvent } from '../../../services/realtimeHub.js';
 
 // @desc    Get store settings
 // @route   GET /api/settings
@@ -9,6 +10,7 @@ export const getSettings = async (req, res, next) => {
     
     if (!settings) {
       settings = await Settings.create({ id: 'store-settings' });
+      publishRealtimeEvent('settings:changed', { reason: 'settings_created' });
     }
     
     res.json({ success: true, data: settings });
@@ -36,6 +38,7 @@ export const updateSettings = async (req, res, next) => {
 
     const updatedSettings = await settings.save();
     res.json({ success: true, data: updatedSettings });
+    publishRealtimeEvent('settings:changed', { reason: 'settings_updated' });
   } catch (error) {
     next(error);
   }

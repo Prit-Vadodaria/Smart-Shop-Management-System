@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AuthContext } from '../shared/context/AuthContext';
 import { ShoppingBag, Users, Package, FileText, ArrowUpRight, TrendingUp, Settings as SettingsIcon, Save, AlertTriangle, RefreshCw, Clock, Truck, Play, Pause } from 'lucide-react';
 import api from '../shared/services/api';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 
 const StoreSettings = ({ setCustomAlert }) => {
   const [settings, setSettings] = useState({ shippingPercentage: 5, freeShippingThreshold: 500, minSubscriptionAmount: 0 });
@@ -22,6 +23,21 @@ const StoreSettings = ({ setCustomAlert }) => {
     };
     fetchSettings();
   }, []);
+
+  useRealtimeEvent(
+    (event) => event.event === 'settings:changed',
+    () => {
+      const fetchSettings = async () => {
+        try {
+          const { data } = await api.get('/settings');
+          setSettings(data.data);
+        } catch (err) {
+          console.error('Error fetching settings', err);
+        }
+      };
+      fetchSettings();
+    }
+  );
 
   const handleSave = async () => {
     try {
@@ -241,6 +257,17 @@ const Dashboard = () => {
     fetchNumberOfOrdersofCustomer();
     fetchMySubscriptionsCount();
   }, [user.role]);
+
+  useRealtimeEvent(
+    (event) => ['product:changed', 'order:changed', 'subscription:changed', 'customer:changed', 'dashboard:changed', 'auth:changed'].includes(event.event),
+    () => {
+      fetchLowStock();
+      fetchAssignedOrders();
+      fetchStats();
+      fetchNumberOfOrdersofCustomer();
+      fetchMySubscriptionsCount();
+    }
+  );
 
   const handleCancelOrder = (orderId) => {
     setConfirmDialog({

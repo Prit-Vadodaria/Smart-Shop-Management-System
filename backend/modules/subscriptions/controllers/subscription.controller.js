@@ -3,6 +3,7 @@ import Product from '../../products/models/Product.js';
 import Order from '../../billing/models/Order.js';
 import CustomerProfile from '../../customers/models/CustomerProfile.js';
 import { createPortalPayment } from '../../billing/services/payment.service.js';
+import { publishRealtimeEvent } from '../../../services/realtimeHub.js';
 
 // @desc    Get user subscription lists (Daily, Alternate, Monthly)
 // @route   GET /api/subscriptions/my-lists
@@ -80,6 +81,7 @@ export const updateSubscriptionListItems = async (req, res, next) => {
     
     // Refresh with populated product
     const updated = await Subscription.findById(list._id).populate('items.product');
+    publishRealtimeEvent('subscription:changed', { subscriptionId: list._id.toString(), customerId: req.user._id.toString(), reason: 'items_updated' });
     res.json(updated);
   } catch (error) {
     next(error);
@@ -135,6 +137,7 @@ export const updateSubscriptionListSettings = async (req, res, next) => {
     if (vacationMode) list.vacationMode = vacationMode;
 
     await list.save();
+    publishRealtimeEvent('subscription:changed', { subscriptionId: list._id.toString(), customerId: list.customer.toString(), reason: 'settings_updated' });
     res.json(list);
   } catch (error) {
     next(error);
@@ -266,6 +269,7 @@ export const generateDailyOrders = async (req, res, next) => {
                 if (itemsPrice < minSubscriptionAmount) {
                     list.status = 'Action Required';
                     await list.save();
+                    publishRealtimeEvent('subscription:changed', { subscriptionId: list._id.toString(), customerId: list.customer._id.toString(), reason: 'under_minimum' });
 
                     const NotificationModel = (await import('../../notifications/models/Notification.js')).default;
                     await NotificationModel.create({
@@ -307,6 +311,8 @@ export const generateDailyOrders = async (req, res, next) => {
                     paymentContext: 'Subscription Bill'
                 });
                 createdOrdersCount++;
+                publishRealtimeEvent('order:changed', { orderId: order._id.toString(), customerId: list.customer._id.toString(), reason: 'subscription_generated' });
+                publishRealtimeEvent('subscription:changed', { subscriptionId: list._id.toString(), customerId: list.customer._id.toString(), reason: 'order_generated' });
             } catch (err) {
                 console.error(`Error processing list ${list._id}:`, err);
                 errorCount++;
@@ -314,6 +320,7 @@ export const generateDailyOrders = async (req, res, next) => {
         }
 
         res.json({ success: true, createdOrdersCount, errorCount, message: `System generated ${createdOrdersCount} consolidated orders.` });
+        publishRealtimeEvent('dashboard:changed', { reason: 'subscription_batch_generated' });
     } catch (err) {
         next(err);
     }

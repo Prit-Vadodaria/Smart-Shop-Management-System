@@ -4,6 +4,7 @@ import Subscription from '../../subscriptions/models/Subscription.js';
 import Notification from '../../notifications/models/Notification.js';
 import { getUploadedImagePath } from '../../../middleware/uploadMiddleware.js';
 import { parseProductBody } from '../../../utils/parseProductBody.js';
+import { publishRealtimeEvent } from '../../../services/realtimeHub.js';
 
 const applyUploadedImage = (body, file) => {
   if (file) {
@@ -133,6 +134,7 @@ export const createProduct = async (req, res, next) => {
     });
 
     const createdProduct = await product.save();
+    publishRealtimeEvent('product:changed', { productId: createdProduct._id.toString(), scope: 'catalog' });
     res.status(201).json({ success: true, data: createdProduct });
   } catch (error) {
     next(error);
@@ -181,6 +183,7 @@ export const updateProduct = async (req, res, next) => {
       if (isActive !== undefined) product.isActive = isActive;
 
       const updatedProduct = await product.save();
+      publishRealtimeEvent('product:changed', { productId: updatedProduct._id.toString(), scope: 'catalog' });
       res.json({ success: true, data: updatedProduct });
     } else {
       res.status(404).json({ success: false, message: 'Product not found' });
@@ -219,7 +222,10 @@ export const deleteProduct = async (req, res, next) => {
           message: `Your "${sub.type}" subscription has been suspended because the product "${product.name}" is no longer active in our store. Please update your subscription list.`,
           relatedId: sub._id.toString()
         });
+        publishRealtimeEvent('notification:changed', { userId: sub.customer.toString(), reason: 'subscription_suspended' });
       }
+      publishRealtimeEvent('product:changed', { productId: product._id.toString(), scope: 'inventory' });
+      publishRealtimeEvent('subscription:changed', { affectedProductId: product._id.toString() });
       
       res.json({ 
         success: true, 

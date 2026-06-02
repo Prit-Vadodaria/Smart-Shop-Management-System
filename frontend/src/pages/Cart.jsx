@@ -4,6 +4,7 @@ import { CartContext } from '../context/CartContext';
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag } from 'lucide-react';
 import api from '../shared/services/api';
 import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
+import { useRealtimeEvent } from '../shared/realtime/useRealtimeEvent.js';
 
 const Cart = () => {
     const { cartItems, removeFromCart, updateQuantity, cartTotalPrice, cartTotalCount } = useContext(CartContext);
@@ -22,6 +23,21 @@ const Cart = () => {
         };
         fetchSettings();
     }, []);
+
+    useRealtimeEvent(
+      (event) => event.event === 'settings:changed',
+      () => {
+        const fetchSettings = async () => {
+          try {
+            const { data } = await api.get('/settings');
+            setSettings(data.data);
+          } catch (err) {
+            console.error('Error fetching settings', err);
+          }
+        };
+        fetchSettings();
+      }
+    );
 
     // Calculate individual item-level tax summation
     const totalTaxAmount = cartItems.reduce((acc, item) => {
