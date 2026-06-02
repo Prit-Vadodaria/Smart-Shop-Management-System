@@ -9,12 +9,12 @@ import { protect, authorize } from '../../../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.route('/')
-  .get(protect, authorize('admin', 'employee'), getAdminCustomers);
+  .get(protect, authorize('admin'), getAdminCustomers);
 
 router.route('/:id')
-  .get(protect, authorize('admin', 'employee'), getAdminCustomerDetails);
+  .get(protect, authorize('admin'), getAdminCustomerDetails);
 
 router.route('/:id/status')
-  .put(protect, authorize('admin', 'employee'), updateCustomerStatus);
+  .put(protect, authorize('admin'), updateCustomerStatus);
 
 export default router;

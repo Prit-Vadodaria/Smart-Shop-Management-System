@@ -110,13 +110,13 @@ function App() {
             } />
 
             <Route path="/admin/customers" element={
-              <ProtectedRoute roles={['admin', 'employee']}>
+              <ProtectedRoute roles={['admin']}>
                 <CustomersList />
               </ProtectedRoute>
             } />
 
             <Route path="/admin/customers/:id" element={
-              <ProtectedRoute roles={['admin', 'employee']}>
+              <ProtectedRoute roles={['admin']}>
                 <CustomerProfile />
               </ProtectedRoute>
             } />
