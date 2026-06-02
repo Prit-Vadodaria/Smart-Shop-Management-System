@@ -109,15 +109,15 @@ const Navbar = () => {
                     Employees
                   </Link>
                 )}
+                {user.role === 'admin' && (
+                  <Link to="/admin/customers" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                    Customers
+                  </Link>
+                )}
                 {(user.role === 'admin' || user.role === 'employee') && (
-                  <>
-                    <Link to="/admin/customers" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
-                      Customers
-                    </Link>
-                    <Link to="/store-orders" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
-                      Orders & POS
-                    </Link>
-                  </>
+                  <Link to="/store-orders" className="border-transparent text-gray-500 hover:border-primary-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                    Orders & POS
+                  </Link>
                 )}
                 {user.role === 'customer' && (
                   <>
