@@ -23,7 +23,9 @@ import settingsRoutes from './modules/settings/routes/settings.routes.js';
 import notificationRoutes from './modules/notifications/routes/notification.routes.js';
 import { addRealtimeClient } from './services/realtimeHub.js';
 import { authenticateRealtime } from './middleware/realtimeAuth.js';
+import dns from 'dns';
 
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 // Load env vars
 dotenv.config();
 
