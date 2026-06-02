@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getToken, isTokenExpired } from '../utils/session.js';
 import { notifySessionExpired } from './sessionEvents.js';
 
-export const API_ORIGIN = import.meta.env.VITE_API_ORIGIN || 'https://vyora-ee8n.onrender.com';
+export const API_ORIGIN = import.meta.env.VITE_API_ORIGIN || 'http://localhost:5000';
 
 const api = axios.create({
   baseURL: `${API_ORIGIN}/api`,
