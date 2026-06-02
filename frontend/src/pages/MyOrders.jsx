@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Package, Truck, Store, Clock, CalendarDays, ExternalLink, ChevronRight, CheckCircle, MapPin, X, AlertTriangle } from 'lucide-react';
 import api from '../shared/services/api';
 import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
+import OrderTypeBadge from '../components/orders/OrderTypeBadge';
+import { ORDER_TYPE_FILTER_OPTIONS, matchesOrderTypeFilter } from '../shared/utils/orderTypeFilter';
 
 const MyOrders = () => {
     const [orders, setOrders] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [statusFilter, setStatusFilter] = useState('all');
+    const [orderTypeFilter, setOrderTypeFilter] = useState('all');
     const [selectedDate, setSelectedDate] = useState('');
     const [customAlert, setCustomAlert] = useState('');
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
@@ -51,6 +54,10 @@ const MyOrders = () => {
 
     const filteredOrders = orders.filter((order) => {
         if (statusFilter !== 'all' && order.status !== statusFilter) {
+            return false;
+        }
+
+        if (!matchesOrderTypeFilter(order, orderTypeFilter)) {
             return false;
         }
 
@@ -146,6 +153,19 @@ const MyOrders = () => {
                                     )}
                                 </div>
                             </div>
+
+                            <div className="flex flex-col gap-1 w-full sm:w-52">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Order Type</label>
+                                <select
+                                    value={orderTypeFilter}
+                                    onChange={(e) => setOrderTypeFilter(e.target.value)}
+                                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer hover:bg-gray-100/50 transition-colors"
+                                >
+                                    {ORDER_TYPE_FILTER_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
                         <div className="text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 w-full sm:w-auto text-center sm:text-left">
@@ -177,11 +197,12 @@ const MyOrders = () => {
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col items-end gap-2">
-                                            <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 ${order.status === 'Delivered' || order.status === 'Picked Up' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                                    order.status === 'Cancelled' ? 'bg-red-100 text-red-700 border border-red-200' :
-                                                        order.status === 'Out for delivery' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
-                                                            'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                                        <div className="flex flex-wrap items-center justify-end gap-2">
+                                            <OrderTypeBadge order={order} />
+                                            <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 ${order.status === 'Delivered' || order.status === 'Picked Up' ? 'bg-green-100 text-green-800 border border-green-200' :
+                                                order.status === 'Cancelled' ? 'bg-red-100 text-red-800 border border-red-200' :
+                                                    order.status === 'Out for delivery' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                                                        'bg-yellow-100 text-yellow-800 border border-yellow-200'
                                                 }`}>
                                                 {order.status === 'Delivered' || order.status === 'Picked Up' ? <CheckCircle className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
                                                 {order.status}

@@ -2,6 +2,7 @@ import Subscription from '../models/Subscription.js';
 import Product from '../../products/models/Product.js';
 import Order from '../../billing/models/Order.js';
 import CustomerProfile from '../../customers/models/CustomerProfile.js';
+import { createPortalPayment } from '../../billing/services/payment.service.js';
 
 // @desc    Get user subscription lists (Daily, Alternate, Monthly)
 // @route   GET /api/subscriptions/my-lists
@@ -291,12 +292,20 @@ export const generateDailyOrders = async (req, res, next) => {
                         country: 'India'
                     },
                     orderType: 'Home Delivery',
+                    orderChannel: 'Subscription Order',
                     paymentMethod: 'Cash',
                     isPaid: false,
                     status: 'Pending'
                 });
 
                 await order.save();
+                await createPortalPayment({
+                    orderId: order._id,
+                    customerId: list.customer._id,
+                    paymentMode: 'Cash on Delivery',
+                    amount: order.totalPrice,
+                    paymentContext: 'Subscription Bill'
+                });
                 createdOrdersCount++;
             } catch (err) {
                 console.error(`Error processing list ${list._id}:`, err);

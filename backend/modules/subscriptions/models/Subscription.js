@@ -37,8 +37,8 @@ const SubscriptionSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Active', 'Paused', 'Cancelled', 'Action Required'],
-    default: 'Active'
+    enum: ['Active', 'Paused', 'Inactive'],
+    default: 'Inactive'
   },
   vacationMode: {
     isOn: { type: Boolean, default: false },

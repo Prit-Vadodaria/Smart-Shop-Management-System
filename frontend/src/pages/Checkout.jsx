@@ -101,6 +101,7 @@ const Checkout = () => {
                 shippingAddress: finalShipping,
                 paymentMethod: paymentMethod === 'Online' ? 'UPI' : 'Cash on Delivery',
                 orderType: orderType || 'Takeaway',
+                orderChannel: orderType === 'Home Delivery' ? 'Online Order' : 'Takeaway Order',
                 itemsPrice: cartTotalPrice,
                 taxPrice: totalTaxAmount,
                 shippingPrice: finalShippingFee,

@@ -332,7 +332,7 @@ const Dashboard = () => {
             <StatCard title="Total Inventory Value" value={`₹${stats.totalInventoryValue.toLocaleString()}`} icon={ShoppingBag} to="/products" />
             <StatCard title="Active Subscriptions" value={stats.activeSubscriptions} icon={FileText} to="/subscriptions" />
             <StatCard title="Products in Stock" value={stats.totalProductsInStock.toLocaleString()} icon={Package} to="/products" />
-            <StatCard title="Total Customers" value={stats.totalCustomers} icon={Users} />
+            <StatCard title="Total Customers" value={stats.totalCustomers} icon={Users} to="/admin/customers" />
           </div>
 
           <div className="grid grid-cols-1 gap-8 mb-8">

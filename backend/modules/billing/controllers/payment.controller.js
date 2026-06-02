@@ -161,3 +161,84 @@ export const getPaymentSummary = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Get pending subscription amount for current customer
+// @route   GET /api/payments/subscription/pending
+// @access  Private/Customer
+export const getPendingSubscriptionAmount = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'customer') {
+      return res.status(403).json({ success: false, message: 'Only customers can access subscription pending amount.' });
+    }
+
+    const pendingOrders = await Order.find({
+      customer: req.user._id,
+      orderChannel: 'Subscription Order',
+      isPaid: false,
+      status: { $ne: 'Cancelled' }
+    }).select('_id totalPrice createdAt');
+
+    const pendingAmount = pendingOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+
+    res.json({
+      success: true,
+      pendingAmount,
+      pendingOrdersCount: pendingOrders.length,
+      orderIds: pendingOrders.map((o) => o._id)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Pay all pending subscription-tagged orders for current customer
+// @route   POST /api/payments/subscription/pay
+// @access  Private/Customer
+export const payPendingSubscriptionOrders = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'customer') {
+      return res.status(403).json({ success: false, message: 'Only customers can pay subscription pending orders.' });
+    }
+
+    const pendingOrders = await Order.find({
+      customer: req.user._id,
+      orderChannel: 'Subscription Order',
+      isPaid: false,
+      status: { $ne: 'Cancelled' }
+    });
+
+    if (pendingOrders.length === 0) {
+      return res.status(400).json({ success: false, message: 'No pending subscription orders to pay.' });
+    }
+
+    const baseTransactionId = req.body?.transactionId || `SUB-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const paymentMode = 'Online';
+
+    for (let i = 0; i < pendingOrders.length; i += 1) {
+      const order = pendingOrders[i];
+      const orderTransactionId = `${baseTransactionId}-${i + 1}`;
+
+      await createPortalPayment({
+        orderId: order._id,
+        customerId: req.user._id,
+        paymentMode,
+        amount: order.totalPrice,
+        transactionId: orderTransactionId,
+        paymentContext: 'Subscription Bill'
+      });
+
+      await syncOrderPaymentState(order);
+    }
+
+    const totalPaidAmount = pendingOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+
+    res.status(201).json({
+      success: true,
+      message: 'Subscription pending amount paid successfully.',
+      paidOrdersCount: pendingOrders.length,
+      totalPaidAmount
+    });
+  } catch (error) {
+    next(error);
+  }
+};
