@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '../shared/services/api';
 import { getProductImageUrl, hasProductImage } from '../shared/utils/productImage';
-import { Calendar, Play, Pause, Trash2, Plus, Search, Info, CheckCircle, ChevronRight, Settings, AlertTriangle, CreditCard, Loader2 } from 'lucide-react';
+import { Calendar, Play, Pause, Trash2, Plus, Search, Info, CheckCircle, ChevronRight, Settings, AlertTriangle } from 'lucide-react';
 
 const MySubscriptions = () => {
     const [lists, setLists] = useState([]);
@@ -15,10 +15,7 @@ const MySubscriptions = () => {
     const initialTab = location.state?.tab || 'Daily';
     const [activeTab, setActiveTab] = useState(initialTab);
     const [customAlert, setCustomAlert] = useState('');
-    const [pendingSubscriptionAmount, setPendingSubscriptionAmount] = useState(0);
-    const [pendingSubscriptionOrdersCount, setPendingSubscriptionOrdersCount] = useState(0);
-    const [showPayModal, setShowPayModal] = useState(false);
-    const [isPaying, setIsPaying] = useState(false);
+
 
     const fetchSubscriptionData = async () => {
         try {
@@ -34,9 +31,7 @@ const MySubscriptions = () => {
             // Fetch store settings
             const { data: settingsData } = await api.get('/settings');
             setSettings(settingsData.data);
-            const { data: pendingData } = await api.get('/payments/subscription/pending');
-            setPendingSubscriptionAmount(pendingData.pendingAmount || 0);
-            setPendingSubscriptionOrdersCount(pendingData.pendingOrdersCount || 0);
+
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to fetch subscription data');
         } finally {
@@ -48,32 +43,9 @@ const MySubscriptions = () => {
         fetchSubscriptionData();
     }, []);
 
-    useEffect(() => {
-        if (!loading && location.state?.triggerSubscriptionPay && pendingSubscriptionAmount > 0) {
-            setShowPayModal(true);
-        }
-    }, [loading, location.state, pendingSubscriptionAmount]);
 
-    const handleSubscriptionPayment = async () => {
-        if (pendingSubscriptionAmount <= 0) {
-            setCustomAlert('No pending subscription amount to pay.');
-            setShowPayModal(false);
-            return;
-        }
 
-        try {
-            setIsPaying(true);
-            const transactionId = `SUB-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
-            await api.post('/payments/subscription/pay', { transactionId });
-            setShowPayModal(false);
-            setCustomAlert('Subscription payment completed successfully.');
-            fetchSubscriptionData();
-        } catch (err) {
-            setCustomAlert(err.response?.data?.message || 'Failed to complete subscription payment.');
-        } finally {
-            setIsPaying(false);
-        }
-    };
+
 
     const updateListItems = async (listId, newItems) => {
         try {
@@ -172,14 +144,7 @@ const MySubscriptions = () => {
                     </h1>
                     <p className="text-gray-500 mt-1">Configure your recurring delivery schedules.</p>
                 </div>
-                <button
-                    onClick={() => setShowPayModal(true)}
-                    disabled={pendingSubscriptionAmount <= 0}
-                    className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed text-white px-5 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 shadow-sm transition-colors"
-                >
-                    <CreditCard className="h-4 w-4" />
-                    Pay Pending Subscription (₹{pendingSubscriptionAmount.toFixed(2)})
-                </button>
+
             </div>
 
             {error && (
@@ -482,40 +447,7 @@ const MySubscriptions = () => {
                 </div>
             )}
 
-            {showPayModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-                            <CreditCard className="h-5 w-5 text-primary-600" />
-                            Subscription Payment Gateway
-                        </h3>
-                        <p className="text-sm text-gray-500 mb-5">
-                            You are about to pay pending subscription dues for <span className="font-bold text-gray-800">{pendingSubscriptionOrdersCount}</span> order(s).
-                        </p>
-                        <div className="bg-gray-50 rounded-2xl border border-gray-100 p-4 mb-6">
-                            <p className="text-xs uppercase tracking-wider text-gray-400 font-bold">Payable Now</p>
-                            <p className="text-2xl font-black text-primary-700 mt-1">₹{pendingSubscriptionAmount.toFixed(2)}</p>
-                        </div>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowPayModal(false)}
-                                disabled={isPaying}
-                                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSubscriptionPayment}
-                                disabled={isPaying || pendingSubscriptionAmount <= 0}
-                                className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                            >
-                                {isPaying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                                {isPaying ? 'Processing...' : 'Pay Now'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 };
