@@ -13,6 +13,10 @@ const SettingsSchema = new mongoose.Schema({
   freeShippingThreshold: {
     type: Number,
     default: 500
+  },
+  minSubscriptionAmount: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

@@ -5,7 +5,7 @@ import { ShoppingBag, Users, Package, FileText, ArrowUpRight, TrendingUp, Settin
 import api from '../shared/services/api';
 
 const StoreSettings = ({ setCustomAlert }) => {
-  const [settings, setSettings] = useState({ shippingPercentage: 5, freeShippingThreshold: 500 });
+  const [settings, setSettings] = useState({ shippingPercentage: 5, freeShippingThreshold: 500, minSubscriptionAmount: 0 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -80,6 +80,19 @@ const StoreSettings = ({ setCustomAlert }) => {
             <span className="absolute left-3 top-2 text-gray-400 font-bold">₹</span>
           </div>
           <p className="text-[10px] text-gray-400 mt-1">Shipping becomes ₹0 if the subtotal exceeds this value.</p>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Minimum Subscription Amount (₹)</label>
+          <div className="relative">
+            <input
+              type="number"
+              value={settings.minSubscriptionAmount}
+              onChange={(e) => setSettings({ ...settings, minSubscriptionAmount: parseFloat(e.target.value) || 0 })}
+              className="w-full pl-8 pr-4 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary-500 outline-none"
+            />
+            <span className="absolute left-3 top-2 text-gray-400 font-bold">₹</span>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1">Customers can only activate or update subscription lists if the total value meets this threshold.</p>
         </div>
       </div>
     </div>

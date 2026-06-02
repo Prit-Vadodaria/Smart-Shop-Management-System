@@ -155,7 +155,6 @@ export const updateProduct = async (req, res, next) => {
       taxPercentage,
       minStockThreshold,
       isSubscriptionEligible,
-      minSubscriptionQuantity,
       isActive,
     } = body;
 
@@ -179,7 +178,6 @@ export const updateProduct = async (req, res, next) => {
       if (taxPercentage !== undefined) product.taxPercentage = taxPercentage;
       if (minStockThreshold !== undefined) product.minStockThreshold = minStockThreshold;
       if (isSubscriptionEligible !== undefined) product.isSubscriptionEligible = isSubscriptionEligible;
-      if (minSubscriptionQuantity !== undefined) product.minSubscriptionQuantity = minSubscriptionQuantity;
       if (isActive !== undefined) product.isActive = isActive;
 
       const updatedProduct = await product.save();

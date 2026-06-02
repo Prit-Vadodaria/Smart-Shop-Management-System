@@ -297,6 +297,7 @@ frontend/src/
 - JWT stored in `localStorage` under key `userInfo` as a JSON object containing `token`
 - Admin is bootstrapped via `bootstrapAdmin.js` — do not manually create admin users in controllers
 - CORS is open and rate limiting is absent — both must be addressed before production
+- Subscription eligibility is amount-based (minSubscriptionAmount config) rather than product-level minimum quantity.
 
 ### How Changes Should Be Documented
 After every session, update the following:

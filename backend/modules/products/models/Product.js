@@ -51,10 +51,6 @@ const ProductSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  minSubscriptionQuantity: {
-    type: Number,
-    default: 1
-  },
   isActive: {
     type: Boolean,
     default: true

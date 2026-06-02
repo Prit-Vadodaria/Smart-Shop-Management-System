@@ -28,10 +28,11 @@ export const updateSettings = async (req, res, next) => {
       settings = await Settings.create({ id: 'store-settings' });
     }
 
-    const { shippingPercentage, freeShippingThreshold } = req.body;
+    const { shippingPercentage, freeShippingThreshold, minSubscriptionAmount } = req.body;
     
     settings.shippingPercentage = shippingPercentage !== undefined ? shippingPercentage : settings.shippingPercentage;
     settings.freeShippingThreshold = freeShippingThreshold !== undefined ? freeShippingThreshold : settings.freeShippingThreshold;
+    settings.minSubscriptionAmount = minSubscriptionAmount !== undefined ? minSubscriptionAmount : settings.minSubscriptionAmount;
 
     const updatedSettings = await settings.save();
     res.json({ success: true, data: updatedSettings });

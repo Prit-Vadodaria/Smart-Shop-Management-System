@@ -3,7 +3,6 @@ const NUMERIC_FIELDS = [
   'taxPercentage',
   'countInStock',
   'minStockThreshold',
-  'minSubscriptionQuantity',
 ];
 
 export const parseProductBody = (body = {}) => {

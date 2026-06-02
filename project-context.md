@@ -439,7 +439,7 @@ _id, user (ref:User, unique), phone, operationalRole, dashboardPreferences: {}, 
 ```
 _id, user (ref:User — creator), name (unique), image, brand, category (Groceries|Dairy|Bakery),
 description, price, taxPercentage, countInStock, minStockThreshold, isSubscriptionEligible,
-minSubscriptionQuantity, isActive, timestamps
+isActive, timestamps
 ```
 - **TODO**: Category enum is hardcoded — needs to become a dynamic Category model
 
@@ -658,6 +658,7 @@ On first server start against a fresh database, `bootstrapAdmin.js` automaticall
 - [x] Navbar with role-aware navigation and cart badge
 - [x] Axios base instance with token interceptor
 - [x] Shop page improvements: stock indicator badges, functional sort dropdown, results count summary, inline quantity selector, tax/unit display, and cart addition feedback toasts
+- [x] Amount-based subscription eligibility with configurable Minimum Subscription Amount in Store Settings
 
 ### In-Progress Features
 - [ ] Services layer (`*.service.js`) not yet implemented inside modules — business logic sits in controllers

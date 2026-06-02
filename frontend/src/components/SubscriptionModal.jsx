@@ -8,7 +8,7 @@ const SubscriptionModal = ({ products = [], onClose }) => {
   const items = Array.isArray(products) ? products : [products];
   const [frequency, setFrequency] = useState('Daily');
   const [quantities, setQuantities] = useState(
-    items.reduce((acc, p) => ({ ...acc, [p._id]: p.minSubscriptionQuantity || 1 }), {})
+    items.reduce((acc, p) => ({ ...acc, [p._id]: 1 }), {})
   );
   const [startDate, setStartDate] = useState('');
   const [customDays, setCustomDays] = useState([]);
@@ -40,11 +40,7 @@ const SubscriptionModal = ({ products = [], onClose }) => {
       return;
     }
 
-    const invalidQty = items.find(p => quantities[p._id] < (p.minSubscriptionQuantity || 1));
-    if (invalidQty) {
-        setError(`Minimum quantity for ${invalidQty.name} is ${invalidQty.minSubscriptionQuantity || 1}`);
-        return;
-    }
+
 
     try {
       setLoading(true);
@@ -114,7 +110,7 @@ const SubscriptionModal = ({ products = [], onClose }) => {
                                         <label className="text-[10px] text-gray-400">Qty:</label>
                                         <input
                                             type="number"
-                                            min={p.minSubscriptionQuantity || 1}
+                                            min="1"
                                             value={quantities[p._id]}
                                             onChange={(e) => setQuantities({ ...quantities, [p._id]: Number(e.target.value) })}
                                             className="w-12 px-1 py-0.5 text-xs border border-gray-200 rounded text-center"

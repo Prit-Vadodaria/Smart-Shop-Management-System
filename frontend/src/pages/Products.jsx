@@ -15,8 +15,7 @@ const defaultFormData = {
     taxPercentage: 0,
     countInStock: 0,
     minStockThreshold: 10,
-    isSubscriptionEligible: false,
-    minSubscriptionQuantity: 1
+    isSubscriptionEligible: false
 };
 
 const Products = () => {
@@ -126,8 +125,7 @@ const Products = () => {
                 taxPercentage: product.taxPercentage || 0,
                 countInStock: product.countInStock || 0,
                 minStockThreshold: product.minStockThreshold || 10,
-                isSubscriptionEligible: product.isSubscriptionEligible || false,
-                minSubscriptionQuantity: product.minSubscriptionQuantity || 1
+                isSubscriptionEligible: product.isSubscriptionEligible || false
             });
             setImagePreview(getProductImageUrl(product.image || product.imageUrl));
         } else {
@@ -316,7 +314,7 @@ const Products = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
                                             {product.isSubscriptionEligible ? (
-                                                <span className="text-green-600 font-bold tabular-nums">Yes (Min: {product.minSubscriptionQuantity})</span>
+                                                <span className="text-green-600 font-bold">Yes</span>
                                             ) : (
                                                 <span className="text-gray-400">No</span>
                                             )}
@@ -445,19 +443,12 @@ const Products = () => {
                                     </div>
 
                                     <div className="bg-primary-50 p-4 rounded-xl mt-4 border border-primary-100">
-                                        <div className="flex items-center mb-3">
+                                        <div className="flex items-center">
                                             <input type="checkbox" id="isSubscriptionEligible" name="isSubscriptionEligible" checked={formData.isSubscriptionEligible} onChange={handleChange} className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded" />
                                             <label htmlFor="isSubscriptionEligible" className="ml-2 block text-sm font-bold text-primary-900 border-0">
                                                 Eligible for Auto-Delivery
                                             </label>
                                         </div>
-
-                                        {formData.isSubscriptionEligible && (
-                                            <div>
-                                                <label className="block text-xs font-semibold text-primary-700 mb-1">Minimum Subscription Quantity</label>
-                                                <input type="number" name="minSubscriptionQuantity" min="1" value={formData.minSubscriptionQuantity} onChange={handleChange} className="w-full px-3 py-1.5 rounded border border-primary-200 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white text-sm" />
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>

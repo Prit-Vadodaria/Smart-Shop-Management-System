@@ -7,6 +7,7 @@ import { Calendar, Play, Pause, Trash2, Plus, Search, Info, CheckCircle, Chevron
 const MySubscriptions = () => {
     const [lists, setLists] = useState([]);
     const [eligibleProducts, setEligibleProducts] = useState([]);
+    const [settings, setSettings] = useState({ minSubscriptionAmount: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -25,6 +26,10 @@ const MySubscriptions = () => {
             // Fetch all eligible products
             const { data: productsData } = await api.get('/products');
             setEligibleProducts(productsData.data.filter(p => p.isSubscriptionEligible));
+
+            // Fetch store settings
+            const { data: settingsData } = await api.get('/settings');
+            setSettings(settingsData.data);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to fetch subscription data');
         } finally {
@@ -60,7 +65,7 @@ const MySubscriptions = () => {
             setCustomAlert('Item already in this list');
             return;
         }
-        const newItems = [...list.items.map(i => ({ product: i.product._id, quantity: i.quantity })), { product: product._id, quantity: product.minSubscriptionQuantity || 1 }];
+        const newItems = [...list.items.map(i => ({ product: i.product._id, quantity: i.quantity })), { product: product._id, quantity: 1 }];
         
         try {
             const { data } = await api.put(`/subscriptions/${list._id}/items`, { items: newItems });
@@ -119,6 +124,11 @@ const MySubscriptions = () => {
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const listTotal = currentList?.items?.reduce((acc, item) => acc + (item.product?.price || 0) * item.quantity, 0) || 0;
+    const minSubAmount = settings?.minSubscriptionAmount || 0;
+    const isUnderMin = listTotal < minSubAmount;
+    const remainingAmount = minSubAmount - listTotal;
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -189,6 +199,25 @@ const MySubscriptions = () => {
                             </div>
 
                             <div className="space-y-4">
+                                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span className="font-semibold text-gray-500">List Subtotal:</span>
+                                        <span className="font-bold text-gray-900">₹{listTotal.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs mb-2">
+                                        <span className="font-medium text-gray-400">Required Minimum:</span>
+                                        <span className="font-semibold text-gray-500">₹{minSubAmount}</span>
+                                    </div>
+                                    {isUnderMin && currentList.items?.length > 0 && (
+                                        <div className="p-2.5 bg-red-50 text-red-600 text-xs rounded-xl border border-red-100 flex items-start gap-1.5 font-semibold animate-pulse">
+                                            <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                                            <span>
+                                                Below Minimum Amount! Add ₹{remainingAmount.toFixed(2)} more to qualify.
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div>
                                     <label className="text-[11px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Commencement Date</label>
                                     <input
@@ -246,9 +275,18 @@ const MySubscriptions = () => {
                                                             setCustomAlert("Please add an Item to Start the list.");
                                                             return;
                                                         }
+                                                        if (isUnderMin) {
+                                                            setCustomAlert(`Cannot start subscription list. Minimum subscription amount is ₹${minSubAmount}. Current total is ₹${listTotal.toFixed(2)}.`);
+                                                            return;
+                                                        }
                                                         updateListSettings(currentList._id, { status: 'Active' });
                                                     }}
-                                                    className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold transition-colors"
+                                                    disabled={isUnderMin && !isListEmpty}
+                                                    className={`flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 text-xs font-bold transition-colors ${
+                                                        isUnderMin && !isListEmpty
+                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                            : 'bg-green-50 hover:bg-green-100 text-green-700'
+                                                    }`}
                                                 >
                                                     <Play className="h-3.5 w-3.5" /> {currentList.status === 'Paused' && !isListEmpty ? 'Resume List' : 'Start List'}
                                                 </button>

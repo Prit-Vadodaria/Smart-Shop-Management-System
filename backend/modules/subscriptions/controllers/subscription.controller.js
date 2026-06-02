@@ -48,11 +48,33 @@ export const updateSubscriptionListItems = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized' });
     }
 
-    list.items = items;
-    // When items are updated, if status was 'Action Required', reset to 'Active' since user resolved it
-    if (list.status === 'Action Required') {
-      list.status = 'Active';
+    // Fetch store settings for min subscription amount validation
+    const Settings = (await import('../../settings/models/Settings.js')).default;
+    const settings = await Settings.findOne({ id: 'store-settings' });
+    const minSubscriptionAmount = settings ? settings.minSubscriptionAmount || 0 : 0;
+
+    // Calculate total value of the items
+    let totalVal = 0;
+    if (items && items.length > 0) {
+      for (const item of items) {
+        const prod = await Product.findById(item.product);
+        if (prod && prod.isActive && prod.isSubscriptionEligible) {
+          totalVal += prod.price * item.quantity;
+        }
+      }
     }
+
+    list.items = items;
+    // When items are updated, if status was 'Action Required', reset to 'Active' if it qualifies
+    if (list.status === 'Action Required') {
+      if (items.length > 0 && totalVal < minSubscriptionAmount) {
+        return res.status(400).json({ success: false, message: `Minimum subscription amount is ₹${minSubscriptionAmount}. Your current subscription total is ₹${totalVal.toFixed(2)}.` });
+      }
+      list.status = 'Active';
+    } else if (list.status === 'Active' && items.length > 0 && totalVal < minSubscriptionAmount) {
+      return res.status(400).json({ success: false, message: `Minimum subscription amount is ₹${minSubscriptionAmount}. Your current subscription total is ₹${totalVal.toFixed(2)}.` });
+    }
+
     await list.save();
     
     // Refresh with populated product
@@ -83,7 +105,30 @@ export const updateSubscriptionListSettings = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized' });
     }
 
-    if (status) list.status = status;
+    if (status) {
+      if (status === 'Active') {
+        let totalVal = 0;
+        if (list.items && list.items.length > 0) {
+          for (const item of list.items) {
+            const prod = await Product.findById(item.product);
+            if (prod && prod.isActive && prod.isSubscriptionEligible) {
+              totalVal += prod.price * item.quantity;
+            }
+          }
+        }
+        const Settings = (await import('../../settings/models/Settings.js')).default;
+        const settings = await Settings.findOne({ id: 'store-settings' });
+        const minSubscriptionAmount = settings ? settings.minSubscriptionAmount || 0 : 0;
+
+        if (!list.items || list.items.length === 0) {
+          return res.status(400).json({ success: false, message: 'Cannot start an empty subscription list.' });
+        }
+        if (totalVal < minSubscriptionAmount) {
+          return res.status(400).json({ success: false, message: `Minimum subscription amount is ₹${minSubscriptionAmount}. Your current subscription total is ₹${totalVal.toFixed(2)}. Please add more items.` });
+        }
+      }
+      list.status = status;
+    }
     if (startDate) list.startDate = startDate;
     if (customDates) list.customDates = customDates;
     if (vacationMode) list.vacationMode = vacationMode;
@@ -211,6 +256,25 @@ export const generateDailyOrders = async (req, res, next) => {
                 }
 
                 if (orderItems.length === 0) continue;
+
+                // Validate minimum subscription amount
+                const SettingsModel = (await import('../../settings/models/Settings.js')).default;
+                const settingsData = await SettingsModel.findOne({ id: 'store-settings' });
+                const minSubscriptionAmount = settingsData ? settingsData.minSubscriptionAmount || 0 : 0;
+
+                if (itemsPrice < minSubscriptionAmount) {
+                    list.status = 'Action Required';
+                    await list.save();
+
+                    const NotificationModel = (await import('../../notifications/models/Notification.js')).default;
+                    await NotificationModel.create({
+                        user: list.customer._id,
+                        title: 'Subscription Suspended - Under Minimum Amount',
+                        message: `Your "${list.type}" subscription has been suspended because the total value (₹${itemsPrice}) is below the configured Minimum Subscription Amount (₹${minSubscriptionAmount}). Please update your subscription list.`,
+                        relatedId: list._id.toString()
+                    });
+                    continue;
+                }
 
                 const order = new Order({
                     customer: list.customer._id,
